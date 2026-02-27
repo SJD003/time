@@ -2,166 +2,520 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ميقات | Meeqat</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;500;800&display=swap" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#5f27cd">
+    <meta name="mobile-web-app-capable" content="yes">
+
+    <title>ميزان المحاسبة</title>
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
+    
     <style>
+        :root {
+            --primary: #5f27cd;
+            --bg: #f8f9fd;
+            --card: #ffffff;
+            --text-main: #2d3436;
+            --sin-color: #ff4757;
+            --obey-color: #2ed573;
+            --shadow: 0 8px 30px rgba(0,0,0,0.08);
+            --radius: 24px;
+        }
+
+        * {
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
         body {
+            margin: 0; padding: 0; width: 100%; height: 100vh;
+            background-color: var(--bg);
             font-family: 'Tajawal', sans-serif;
-            background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
+            overflow: hidden;
+            overscroll-behavior-y: none;
+        }
+
+        .app-wrapper {
+            display: flex; flex-direction: column;
+            height: 100vh; max-width: 500px; margin: 0 auto;
+            padding-top: env(safe-area-inset-top);
+            padding-bottom: env(safe-area-inset-bottom);
+        }
+
+        header {
+            padding: 25px 20px; background: var(--card);
+            border-radius: 0 0 var(--radius) var(--radius);
+            box-shadow: var(--shadow); z-index: 10;
+        }
+
+        .header-top { 
+            display: flex; 
+            flex-direction: column;
+            align-items: center; 
+            text-align: center;
+            margin-bottom: 15px;
+            gap: 5px;
+        }
+        .header-top h1 { font-size: 22px; margin: 0; color: var(--primary); font-weight: 700; }
+        .date-chip { font-size: 14px; color: var(--primary); opacity: 0.8; font-weight: 500; }
+
+        .progress-box { background: #f0f0f0; height: 10px; border-radius: 20px; overflow: hidden; }
+        #pBar { 
+            height: 100%; width: 50%; 
+            background: linear-gradient(90deg, var(--primary), #a29bfe);
+            transition: width 0.8s cubic-bezier(0.23, 1, 0.32, 1);
+        }
+
+        .main-content {
+            flex: 1; overflow-y: auto; padding: 20px;
+            overscroll-behavior-y: contain;
+        }
+
+        .wisdom-box {
+            background: linear-gradient(135deg, #ffffff, #f1f2f6);
+            padding: 20px; border-radius: 20px; margin-bottom: 25px;
+            font-size: 14.5px; line-height: 1.7; color: #444;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.03);
+            border: 1px solid #fff;
+            text-align: center;
+        }
+
+        /* --- Prayer Bar Styles --- */
+        .prayer-bar-container {
+            margin-bottom: 20px;
+            cursor: pointer;
+        }
+        .prayer-bar {
+            background: var(--primary);
             color: white;
-            min-height: 100vh;
+            padding: 15px;
+            border-radius: 18px;
             display: flex;
+            flex-direction: column;
             align-items: center;
             justify-content: center;
-            margin: 0;
+            box-shadow: 0 8px 20px rgba(95, 39, 205, 0.25);
+            position: relative;
+            overflow: hidden;
         }
-        .glass-card {
-            background: rgba(255, 255, 255, 0.05);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 2.5rem;
-            width: 90%;
-            max-width: 400px;
-            padding: 2rem;
-            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+        .prayer-bar::before {
+            content: ''; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%;
+            background: linear-gradient(45deg, transparent, rgba(255,255,255,0.1), transparent);
+            transform: rotate(45deg); pointer-events: none;
         }
-        .time-row {
-            background: rgba(255, 255, 255, 0.03);
-            border-radius: 1.2rem;
-            padding: 1rem;
-            margin-top: 0.8rem;
-            display: flex;
-            justify-content: space-between;
-            transition: 0.3s;
+        .prayer-time-main { font-size: 18px; font-weight: 700; margin-bottom: 4px; letter-spacing: 1px; }
+        .hijri-date { font-size: 13px; opacity: 0.9; }
+        
+        .prayer-dropdown {
+            background: white;
+            border-radius: 18px;
+            margin-top: 10px;
+            padding: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+            display: none;
+            animation: slideDown 0.3s ease-out;
         }
-        .active-prayer {
-            border: 1px solid #ffd700;
-            background: rgba(255, 215, 0, 0.1);
+        @keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+        
+        .p-row {
+            display: flex; justify-content: space-between;
+            padding: 10px 5px;
+            border-bottom: 1px solid #f0f0f0;
+            color: var(--text-main);
+            font-size: 15px;
         }
-        .loader {
-            width: 18px; height: 18px;
-            border: 2px solid #ffffff33;
-            border-top-color: #ffd700;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-            display: inline-block;
+        .p-row:last-child { border-bottom: none; }
+        .p-row span:last-child { font-weight: bold; color: var(--primary); }
+
+        .tabs {
+            display: flex; background: #eee; padding: 5px; border-radius: 18px; margin-bottom: 20px;
         }
-        @keyframes spin { to { transform: rotate(360deg); } }
+        .tab {
+            flex: 1; padding: 12px; border: none; border-radius: 14px;
+            background: none; font-weight: 700; color: #777;
+            cursor: pointer; transition: 0.3s; font-family: inherit;
+        }
+        .tab.active { background: var(--card); color: var(--primary); box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+
+        .item-card {
+            background: var(--card); padding: 18px; border-radius: 22px;
+            display: flex; align-items: center; justify-content: space-between;
+            margin-bottom: 15px; box-shadow: var(--shadow);
+            border: 1px solid transparent; transition: 0.3s;
+        }
+        .item-card.done { transform: scale(0.98); opacity: 0.7; background: #fdfdfd; }
+
+        .item-info { flex: 1; pointer-events: none; }
+        .item-info b { display: block; font-size: 16px; margin-bottom: 4px; color: #2d3436; }
+        .item-info span { font-size: 12px; color: #a4b0be; }
+
+        .btns { display: flex; gap: 12px; }
+        .btn {
+            width: 44px; height: 44px; border-radius: 15px; border: none;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 18px; cursor: pointer; transition: 0.2s;
+        }
+        .btn-note { background: #f1f2f6; color: var(--primary); }
+        .btn-check { background: #f1f2f6; color: #dcdde1; }
+        .btn-check.active-s { background: var(--sin-color); color: white; }
+        .btn-check.active-o { background: var(--obey-color); color: white; }
+
+        .fab-add {
+            position: fixed; bottom: 30px; left: 30px;
+            width: 60px; height: 60px; border-radius: 30px;
+            background: var(--primary); color: white;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 24px; box-shadow: 0 10px 25px rgba(95, 39, 205, 0.4);
+            border: none; cursor: pointer; z-index: 20;
+        }
+
+        .modal-overlay {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.6);
+            display: none; align-items: center; justify-content: center;
+            z-index: 100; backdrop-filter: blur(8px); padding: 20px;
+        }
+        .modal-body {
+            background: white; width: 100%; max-width: 400px;
+            padding: 30px; border-radius: 30px; box-shadow: 0 30px 60px rgba(0,0,0,0.3);
+        }
+        .modal-body h3 { margin: 0 0 20px 0; color: var(--primary); }
+        input, textarea {
+            width: 100%; padding: 15px; border: 1.5px solid #eee;
+            border-radius: 15px; margin-bottom: 15px; font-family: inherit;
+            box-sizing: border-box; outline: none; font-size: 16px;
+        }
+        input:focus { border-color: var(--primary); }
+        .save-btn {
+            width: 100%; padding: 15px; background: var(--primary);
+            color: white; border: none; border-radius: 15px;
+            font-weight: bold; font-size: 16px; cursor: pointer;
+        }
+        .delete-text { color: var(--sin-color); font-size: 13px; text-align: center; cursor: pointer; margin-top: 15px; }
+
     </style>
 </head>
 <body>
 
-    <div class="glass-card text-center">
-        <div id="hijri-date" class="text-lg opacity-80 mb-6">جاري التحميل...</div>
-        
-        <div class="mb-8">
-            <h2 id="next-p-name" class="text-sm opacity-60">الصلاة القادمة</h2>
-            <div id="countdown" class="text-5xl font-bold my-2 tracking-tighter">00:00:00</div>
-            <div id="current-time" class="text-xs opacity-40 italic">--:--:--</div>
+<div class="app-wrapper">
+    <header>
+        <div class="header-top">
+            <h1>ميزان المحاسبة</h1>
+            <div class="date-chip" id="dateText">---</div>
+        </div>
+        <div class="progress-box">
+            <div id="pBar"></div>
+        </div>
+    </header>
+
+    <main class="main-content" id="scrollArea">
+        <div class="wisdom-box">
+            <strong style="color:var(--primary)">الإمام الكاظم (عليه السلام):</strong><br>
+            "ليس منا من لم يحاسب نفسه في كل يوم، فإن عمل خيرا استزاد الله منه وحمد الله عليه، وإن عمل شيئا شرا استغفر الله وتاب إليه."
         </div>
 
-        <div class="space-y-2">
-            <div id="c-fajr" class="time-row"><span>الصبح (+35د)</span><span id="t-fajr">--:--</span></div>
-            <div id="c-dhuhr" class="time-row"><span>الظهر (+10د)</span><span id="t-dhuhr">--:--</span></div>
-            <div id="c-maghrib" class="time-row"><span>المغرب</span><span id="t-maghrib">--:--</span></div>
+        <div class="prayer-bar-container">
+            <div class="prayer-bar" onclick="togglePrayerMenu()">
+                <div class="prayer-time-main" id="nextPrayerCounter">جاري التحديث...</div>
+                <div class="hijri-date" id="hijriDateDisplay">---</div>
+            </div>
+            
+            <div class="prayer-dropdown" id="prayerMenu">
+                <div class="p-row"><span>الصبح <small>(+35د)</small></span><span id="t-fajr">--:--</span></div>
+                <div class="p-row"><span>الظهر <small>(+10د)</small></span><span id="t-dhuhr">--:--</span></div>
+                <div class="p-row"><span>المغرب</span><span id="t-maghrib">--:--</span></div>
+            </div>
+        </div>
+        <div class="tabs">
+            <button class="tab active" id="tab-sins" onclick="setTab('sins')">🛑 المعاصي</button>
+            <button class="tab" id="tab-obeys" onclick="setTab('obeys')">✅ الطاعات</button>
+            <button class="tab" id="tab-cfg" onclick="setTab('cfg')">⚙️ الإعدادات</button>
         </div>
 
-        <div id="status" class="mt-6 text-[10px] opacity-40">
-            <span class="loader"></span> جاري تحديث البيانات...
-        </div>
+        <div id="list"></div>
+        <div style="height: 100px;"></div>
+    </main>
+
+    <button class="fab-add" id="fab" onclick="openAdd()">+</button>
+</div>
+
+<div class="modal-overlay" id="overlay">
+    <div class="modal-body">
+        <h3 id="mTitle">إضافة عمل</h3>
+        <input type="text" id="mName" placeholder="اسم العمل...">
+        <textarea id="mNote" placeholder="ملاحظات (اختياري)..." rows="3"></textarea>
+        <button class="save-btn" onclick="saveData()">حفظ البيانات</button>
+        <div id="deleteBtn" class="delete-text" onclick="deleteCurrent()" style="display:none;">حذف هذا العمل نهائياً</div>
+        <div class="delete-text" style="color:#aaa" onclick="closeModal()">إغلاق</div>
     </div>
+</div>
 
-    <script>
-        let pTimes = {};
-        const OFFSETS = { Fajr: 35, Dhuhr: 10, Maghrib: 0 };
+<script>
+    // === 1. قواعد البيانات ونظام المحاسبة ===
+    let db = JSON.parse(localStorage.getItem('mizan_pro_v5')) || {
+        sins: [{n:"الغيبة", d:false, nt:""}],
+        obeys: [{n:"الصلوات الخمس", d:false, nt:""}],
+        lastUpdate: new Date().toLocaleDateString()
+    };
 
-        async function init() {
-            // محاولة جلب الموقع، وإذا فشل خلال 4 ثوانٍ نستخدم موقعاً افتراضياً
-            const timeout = setTimeout(() => {
-                console.log("Using default location due to timeout");
-                fetchData(33.3152, 44.3661); // بغداد كموقع افتراضي
-            }, 4000);
+    let activeTab = 'sins';
+    let editIdx = null;
 
-            if (navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(pos => {
+    // === 2. نظام التوقيت الذكي والمخصص ===
+    let pTimes = {};
+    const OFFSETS = { Fajr: 35, Dhuhr: 10, Maghrib: 0 };
+    let clockInterval;
+
+    async function initPrayerService() {
+        // مؤقت احتياطي: إذا تأخر الوصول للموقع، نستخدم بغداد كافتراضي
+        const timeout = setTimeout(() => {
+            fetchPrayerTimes(33.3152, 44.3661);
+        }, 4000);
+
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+                (pos) => {
                     clearTimeout(timeout);
-                    fetchData(pos.coords.latitude, pos.coords.longitude);
-                }, () => {
+                    fetchPrayerTimes(pos.coords.latitude, pos.coords.longitude);
+                },
+                (err) => {
                     clearTimeout(timeout);
-                    fetchData(33.3152, 44.3661);
-                });
+                    fetchPrayerTimes(33.3152, 44.3661); 
+                }, { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
+            );
+        } else {
+            clearTimeout(timeout);
+            fetchPrayerTimes(33.3152, 44.3661);
+        }
+    }
+
+    async function fetchPrayerTimes(lat, lng) {
+        try {
+            const res = await fetch(`https://api.aladhan.com/v1/timings?latitude=${lat}&longitude=${lng}&method=0`);
+            const json = await res.json();
+            const t = json.data.timings;
+            const hDate = json.data.date.hijri;
+            
+            // تطبيق الإضافات الزمنية (الجعفري + الإضافات الخاصة)
+            pTimes = {
+                "الصبح": adjustTime(t.Fajr, OFFSETS.Fajr),
+                "الظهر": adjustTime(t.Dhuhr, OFFSETS.Dhuhr),
+                "المغرب": adjustTime(t.Maghrib, OFFSETS.Maghrib)
+            };
+
+            // تحديث التاريخ الهجري والأوقات في القائمة
+            document.getElementById('hijriDateDisplay').innerText = `${hDate.day} ${hDate.month.ar} ${hDate.year}`;
+            document.getElementById('t-fajr').innerText = pTimes["الصبح"];
+            document.getElementById('t-dhuhr').innerText = pTimes["الظهر"];
+            document.getElementById('t-maghrib').innerText = pTimes["المغرب"];
+            
+            runClock();
+        } catch (e) {
+            document.getElementById('nextPrayerCounter').innerText = "حدث خطأ في الشبكة";
+        }
+    }
+
+    function adjustTime(timeStr, minsToAdd) {
+        let [h, m] = timeStr.split(':').map(Number);
+        let d = new Date();
+        d.setHours(h, m + minsToAdd, 0);
+        return d.toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit', hour12:false});
+    }
+
+    function runClock() {
+        if(clockInterval) clearInterval(clockInterval);
+        
+        // تشغيل مباشر لتجنب الانتظار ثانية
+        updateCountdown(); 
+        
+        clockInterval = setInterval(() => {
+            updateCountdown();
+        }, 1000);
+    }
+
+    function updateCountdown() {
+        if (Object.keys(pTimes).length === 0) return;
+        
+        const now = new Date();
+        let next = null; 
+        let name = "";
+        
+        // البحث عن الصلاة القادمة اليوم
+        for (const [n, t] of Object.entries(pTimes)) {
+            let [h, m] = t.split(':').map(Number);
+            let pDate = new Date(); 
+            pDate.setHours(h, m, 0);
+            
+            if (pDate > now) { 
+                next = pDate; 
+                name = n; 
+                break; 
             }
         }
 
-        async function fetchData(lat, lng) {
-            try {
-                const res = await fetch(`https://api.aladhan.com/v1/timings?latitude=${lat}&longitude=${lng}&method=0`);
-                const json = await res.json();
-                const t = json.data.timings;
-                
-                pTimes = {
-                    "الصبح": adjust(t.Fajr, OFFSETS.Fajr),
-                    "الظهر": adjust(t.Dhuhr, OFFSETS.Dhuhr),
-                    "المغرب": adjust(t.Maghrib, OFFSETS.Maghrib)
-                };
-
-                document.getElementById('hijri-date').innerText = json.data.date.hijri.day + " " + json.data.date.hijri.month.ar + " " + json.data.date.hijri.year;
-                document.getElementById('t-fajr').innerText = pTimes["الصبح"];
-                document.getElementById('t-dhuhr').innerText = pTimes["الظهر"];
-                document.getElementById('t-maghrib').innerText = pTimes["المغرب"];
-                document.getElementById('status').innerText = "تم التحديث بنجاح";
-                
-                runClock();
-            } catch (e) {
-                document.getElementById('status').innerText = "خطأ في الشبكة";
-            }
+        // إذا انتهت أوقات اليوم، الصلاة القادمة هي صبح الغد
+        if (!next) {
+            let [h, m] = pTimes["الصبح"].split(':').map(Number);
+            next = new Date(); 
+            next.setDate(next.getDate() + 1); 
+            next.setHours(h, m, 0);
+            name = "الصبح";
         }
 
-        function adjust(time, mins) {
-            let [h, m] = time.split(':').map(Number);
-            let d = new Date();
-            d.setHours(h, m + mins, 0);
-            return d.toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit', hour12:false});
+        // حساب الفارق
+        const diff = next - now;
+        const hh = Math.floor(diff / 3600000);
+        const mm = Math.floor((diff % 3600000) / 60000);
+        const ss = Math.floor((diff % 60000) / 1000);
+
+        const timeString = `${String(hh).padStart(2,'0')}:${String(mm).padStart(2,'0')}:${String(ss).padStart(2,'0')}`;
+        document.getElementById('nextPrayerCounter').innerText = `باقي لـ ${name} - ${timeString}`;
+    }
+
+    function togglePrayerMenu() {
+        const menu = document.getElementById('prayerMenu');
+        menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
+    }
+
+    // === 3. منطق عمل التطبيق وبناء الواجهة ===
+    function checkDay() {
+        const now = new Date();
+        const today = now.toLocaleDateString();
+        
+        const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+        const displayDate = now.toLocaleDateString('ar-EG', options);
+        
+        // تصفير البيانات إذا كان اليوم جديداً
+        if(db.lastUpdate !== today) {
+            db.sins.forEach(i => i.d = false);
+            db.obeys.forEach(i => i.d = false);
+            db.lastUpdate = today;
+            sync();
+        }
+        document.getElementById('dateText').innerText = displayDate;
+    }
+
+    function setTab(t) {
+        activeTab = t;
+        document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
+        document.getElementById(`tab-${t}`).classList.add('active');
+        document.getElementById('fab').style.display = (t === 'cfg') ? 'none' : 'flex';
+        render();
+    }
+
+    function render() {
+        const container = document.getElementById('list');
+        container.innerHTML = '';
+
+        if(activeTab === 'cfg') {
+            container.innerHTML = `
+                <div class="item-card" onclick="exportData()"><b>📥 تصدير نسخة احتياطية</b></div>
+                <div class="item-card" onclick="fullReset()" style="color:var(--sin-color)"><b>🧹 مسح شامل للبيانات</b></div>
+                <p style="text-align:center; color:#ccc; font-size:12px;">نسخة التطبيق V5.6 Platinum</p>
+            `;
+            return;
         }
 
-        function runClock() {
-            setInterval(() => {
-                const now = new Date();
-                document.getElementById('current-time').innerText = now.toLocaleTimeString('ar-EG');
-                
-                let next = null; let name = "";
-                for (const [n, t] of Object.entries(pTimes)) {
-                    let [h, m] = t.split(':');
-                    let pd = new Date(); pd.setHours(h, m, 0);
-                    if (pd > now) { next = pd; name = n; break; }
-                }
+        db[activeTab].forEach((item, i) => {
+            const card = document.createElement('div');
+            card.className = `item-card ${item.d ? 'done' : ''}`;
+            
+            const btnClass = item.d ? (activeTab === 'sins' ? 'active-s' : 'active-o') : '';
+            const mark = item.d ? (activeTab === 'sins' ? '✕' : '✓') : '';
 
-                if (!next) {
-                    let [h, m] = pTimes["الصبح"].split(':');
-                    next = new Date(); next.setDate(next.getDate()+1); next.setHours(h, m, 0);
-                    name = "الصبح";
-                }
+            card.innerHTML = `
+                <div class="item-info">
+                    <b>${item.n}</b>
+                    <span>${item.nt || 'لا توجد ملاحظات'}</span>
+                </div>
+                <div class="btns">
+                    <button class="btn btn-note" onclick="openEdit(${i})">📝</button>
+                    <button class="btn btn-check ${btnClass}" onclick="toggle(${i})">${mark}</button>
+                </div>
+            `;
+            container.appendChild(card);
+        });
+        updateP();
+    }
 
-                const diff = next - now;
-                const hh = Math.floor(diff / 3600000);
-                const mm = Math.floor((diff % 3600000) / 60000);
-                const ss = Math.floor((diff % 60000) / 1000);
+    function toggle(i) {
+        db[activeTab][i].d = !db[activeTab][i].d;
+        if(window.navigator.vibrate) window.navigator.vibrate(15); // اهتزاز خفيف عند الإنجاز
+        sync(); render();
+    }
 
-                document.getElementById('countdown').innerText = 
-                    `${String(hh).padStart(2,'0')}:${String(mm).padStart(2,'0')}:${String(ss).padStart(2,'0')}`;
-                document.getElementById('next-p-name').innerText = `الصلاة القادمة: ${name}`;
-                
-                // Highlight
-                const map = {"الصبح":"c-fajr", "الظهر":"c-dhuhr", "المغرب":"c-maghrib"};
-                Object.values(map).forEach(id => document.getElementById(id).classList.remove('active-prayer'));
-                document.getElementById(map[name]).classList.add('active-prayer');
-            }, 1000);
+    function updateP() {
+        const s = db.sins.filter(x => x.d).length;
+        const o = db.obeys.filter(x => x.d).length;
+        // خوارزمية شريط التقدم الخاصة بك
+        let p = 50 + (o * 8) - (s * 10);
+        p = Math.max(5, Math.min(100, p));
+        const bar = document.getElementById('pBar');
+        bar.style.width = p + '%';
+        bar.style.background = p < 45 ? 'var(--sin-color)' : (p > 55 ? 'var(--obey-color)' : 'var(--primary)');
+    }
+
+    function openAdd() {
+        editIdx = null;
+        document.getElementById('mTitle').innerText = "إضافة عمل جديد";
+        document.getElementById('mName').value = "";
+        document.getElementById('mNote').value = "";
+        document.getElementById('deleteBtn').style.display = "none";
+        document.getElementById('overlay').style.display = "flex";
+    }
+
+    function openEdit(i) {
+        editIdx = i;
+        const item = db[activeTab][i];
+        document.getElementById('mTitle').innerText = "تعديل البيانات";
+        document.getElementById('mName').value = item.n;
+        document.getElementById('mNote').value = item.nt;
+        document.getElementById('deleteBtn').style.display = "block";
+        document.getElementById('overlay').style.display = "flex";
+    }
+
+    function saveData() {
+        const n = document.getElementById('mName').value.trim();
+        const nt = document.getElementById('mNote').value.trim();
+        if(!n) return;
+
+        if(editIdx !== null) {
+            db[activeTab][editIdx].n = n;
+            db[activeTab][editIdx].nt = nt;
+        } else {
+            db[activeTab].push({n:n, d:false, nt:nt});
         }
+        sync(); closeModal(); render();
+    }
 
-        init();
-    </script>
-</body>
-</html>
+    function deleteCurrent() {
+        if(confirm("حذف هذا العمل نهائياً؟")){
+            db[activeTab].splice(editIdx, 1);
+            sync(); closeModal(); render();
+        }
+    }
+
+    function closeModal() { 
+        document.getElementById('overlay').style.display = "none"; 
+    }
+    
+    function sync() { 
+        localStorage.setItem('mizan_pro_v5', JSON.stringify(db)); 
+    }
+    
+    function exportData() {
+        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(db));
+        const a = document.createElement('a'); a.href = dataStr;
+        a.download = "mizan_backup.json"; a.click();
+    }
+
+    function fullReset() {
+        if(confirm("سيتم مسح كل شيء.. هل أنت متأكد؟")){
+            localStorage.clear(); location.reload();
+        }
+    }
+
+    // بدء التشغيل
+    window.onload
