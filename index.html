@@ -83,7 +83,6 @@
             text-align: center;
         }
 
-        /* --- Prayer Bar Styles --- */
         .prayer-bar-container {
             margin-bottom: 20px;
             cursor: pointer;
@@ -106,7 +105,7 @@
             background: linear-gradient(45deg, transparent, rgba(255,255,255,0.1), transparent);
             transform: rotate(45deg); pointer-events: none;
         }
-        .prayer-time-main { font-size: 18px; font-weight: 700; margin-bottom: 4px; letter-spacing: 1px; }
+        .prayer-time-main { font-size: 18px; font-weight: 700; margin-bottom: 4px; }
         .hijri-date { font-size: 13px; opacity: 0.9; }
         
         .prayer-dropdown {
@@ -218,13 +217,13 @@
 
         <div class="prayer-bar-container">
             <div class="prayer-bar" onclick="togglePrayerMenu()">
-                <div class="prayer-time-main" id="nextPrayerCounter">جاري التحديث...</div>
+                <div class="prayer-time-main" id="nextPrayerCounter">جاري التحميل...</div>
                 <div class="hijri-date" id="hijriDateDisplay">---</div>
             </div>
             
             <div class="prayer-dropdown" id="prayerMenu">
-                <div class="p-row"><span>الصبح <small>(+35د)</small></span><span id="t-fajr">--:--</span></div>
-                <div class="p-row"><span>الظهر <small>(+10د)</small></span><span id="t-dhuhr">--:--</span></div>
+                <div class="p-row"><span>الصبح</span><span id="t-fajr">--:--</span></div>
+                <div class="p-row"><span>الظهر</span><span id="t-dhuhr">--:--</span></div>
                 <div class="p-row"><span>المغرب</span><span id="t-maghrib">--:--</span></div>
             </div>
         </div>
@@ -253,7 +252,6 @@
 </div>
 
 <script>
-    // === 1. قواعد البيانات ونظام المحاسبة ===
     let db = JSON.parse(localStorage.getItem('mizan_pro_v5')) || {
         sins: [{n:"الغيبة", d:false, nt:""}],
         obeys: [{n:"الصلوات الخمس", d:false, nt:""}],
@@ -263,138 +261,130 @@
     let activeTab = 'sins';
     let editIdx = null;
 
-    // === 2. نظام التوقيت الذكي والمخصص ===
-    let pTimes = {};
-    const OFFSETS = { Fajr: 35, Dhuhr: 10, Maghrib: 0 };
-    let clockInterval;
+    // --- Prayer Times & Hijri Logic (Start) ---
+    let prayerTimes = null;
 
-    async function initPrayerService() {
-        // مؤقت احتياطي: إذا تأخر الوصول للموقع، نستخدم بغداد كافتراضي
-        const timeout = setTimeout(() => {
-            fetchPrayerTimes(33.3152, 44.3661);
-        }, 4000);
+    // دالة لإضافة دقائق للوقت بصيغة 24 ساعة
+    function addMinutes(timeStr, minsToAdd) {
+        let [h, m] = timeStr.split(':').map(Number);
+        let date = new Date();
+        date.setHours(h, m + minsToAdd, 0, 0);
+        return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+    }
 
+    function initPrayerService() {
+        updateHijriDate();
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(
-                (pos) => {
-                    clearTimeout(timeout);
-                    fetchPrayerTimes(pos.coords.latitude, pos.coords.longitude);
-                },
+                (pos) => fetchPrayerTimes(pos.coords.latitude, pos.coords.longitude),
                 (err) => {
-                    clearTimeout(timeout);
-                    fetchPrayerTimes(33.3152, 44.3661); 
-                }, { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
+                    document.getElementById('nextPrayerCounter').innerText = "تم استخدام الموقع الافتراضي";
+                    // إحداثيات افتراضية (قلعة سكر) في حال رفض الموقع
+                    fetchPrayerTimes(31.8481, 46.0664); 
+                }
             );
         } else {
-            clearTimeout(timeout);
-            fetchPrayerTimes(33.3152, 44.3661);
+            fetchPrayerTimes(31.8481, 46.0664);
         }
     }
 
-    async function fetchPrayerTimes(lat, lng) {
-        try {
-            const res = await fetch(`https://api.aladhan.com/v1/timings?latitude=${lat}&longitude=${lng}&method=0`);
-            const json = await res.json();
-            const t = json.data.timings;
-            const hDate = json.data.date.hijri;
-            
-            // تطبيق الإضافات الزمنية (الجعفري + الإضافات الخاصة)
-            pTimes = {
-                "الصبح": adjustTime(t.Fajr, OFFSETS.Fajr),
-                "الظهر": adjustTime(t.Dhuhr, OFFSETS.Dhuhr),
-                "المغرب": adjustTime(t.Maghrib, OFFSETS.Maghrib)
-            };
-
-            // تحديث التاريخ الهجري والأوقات في القائمة
-            document.getElementById('hijriDateDisplay').innerText = `${hDate.day} ${hDate.month.ar} ${hDate.year}`;
-            document.getElementById('t-fajr').innerText = pTimes["الصبح"];
-            document.getElementById('t-dhuhr').innerText = pTimes["الظهر"];
-            document.getElementById('t-maghrib').innerText = pTimes["المغرب"];
-            
-            runClock();
-        } catch (e) {
-            document.getElementById('nextPrayerCounter').innerText = "حدث خطأ في الشبكة";
-        }
+    function updateHijriDate() {
+        const hijri = new Intl.DateTimeFormat('ar-SA-u-ca-islamic-civil', {
+            day: 'numeric', month: 'long', year: 'numeric'
+        }).format(Date.now());
+        document.getElementById('hijriDateDisplay').innerText = hijri;
     }
 
-    function adjustTime(timeStr, minsToAdd) {
-        let [h, m] = timeStr.split(':').map(Number);
-        let d = new Date();
-        d.setHours(h, m + minsToAdd, 0);
-        return d.toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit', hour12:false});
+    function fetchPrayerTimes(lat, lng) {
+        const date = Math.floor(Date.now() / 1000);
+        // Method 0 = Shia Ithna-Ashari
+        const url = `https://api.aladhan.com/v1/timings/${date}?latitude=${lat}&longitude=${lng}&method=0`;
+
+        fetch(url)
+            .then(res => res.json())
+            .then(data => {
+                const raw = data.data.timings;
+                
+                // تطبيق القواعد الخاصة بك:
+                // الصبح: +35 دقيقة
+                // الظهر: +10 دقائق
+                // المغرب: نفس التوقيت الجعفري الرسمي
+                prayerTimes = {
+                    'Fajr': addMinutes(raw.Fajr, 35),
+                    'Dhuhr': addMinutes(raw.Dhuhr, 10),
+                    'Maghrib': raw.Maghrib
+                };
+                
+                document.getElementById('t-fajr').innerText = convertTime(prayerTimes.Fajr);
+                document.getElementById('t-dhuhr').innerText = convertTime(prayerTimes.Dhuhr);
+                document.getElementById('t-maghrib').innerText = convertTime(prayerTimes.Maghrib);
+                
+                setInterval(updateCountdown, 1000);
+                updateCountdown();
+            })
+            .catch(e => {
+                document.getElementById('nextPrayerCounter').innerText = "خطأ في الاتصال";
+            });
     }
 
-    function runClock() {
-        if(clockInterval) clearInterval(clockInterval);
-        
-        // تشغيل مباشر لتجنب الانتظار ثانية
-        updateCountdown(); 
-        
-        clockInterval = setInterval(() => {
-            updateCountdown();
-        }, 1000);
+    function convertTime(time24) {
+        let [h, m] = time24.split(':');
+        h = parseInt(h);
+        const suffix = h >= 12 ? 'م' : 'ص';
+        h = h % 12 || 12;
+        return `${h}:${m} ${suffix}`;
     }
 
     function updateCountdown() {
-        if (Object.keys(pTimes).length === 0) return;
-        
+        if(!prayerTimes) return;
         const now = new Date();
-        let next = null; 
-        let name = "";
+        const currentTime = now.getHours() * 60 + now.getMinutes();
+        const getMinutes = (t) => parseInt(t.split(':')[0]) * 60 + parseInt(t.split(':')[1]);
         
-        // البحث عن الصلاة القادمة اليوم
-        for (const [n, t] of Object.entries(pTimes)) {
-            let [h, m] = t.split(':').map(Number);
-            let pDate = new Date(); 
-            pDate.setHours(h, m, 0);
-            
-            if (pDate > now) { 
-                next = pDate; 
-                name = n; 
-                break; 
-            }
+        const tFajr = getMinutes(prayerTimes.Fajr);
+        const tDhuhr = getMinutes(prayerTimes.Dhuhr);
+        const tMaghrib = getMinutes(prayerTimes.Maghrib);
+
+        let nextPrayerName = "";
+        let diff = 0;
+
+        if (currentTime < tFajr) {
+            nextPrayerName = "الصبح";
+            diff = tFajr - currentTime;
+        } else if (currentTime < tDhuhr) {
+            nextPrayerName = "الظهر";
+            diff = tDhuhr - currentTime;
+        } else if (currentTime < tMaghrib) {
+            nextPrayerName = "المغرب";
+            diff = tMaghrib - currentTime;
+        } else {
+            nextPrayerName = "الصبح";
+            diff = (24 * 60 - currentTime) + tFajr;
         }
 
-        // إذا انتهت أوقات اليوم، الصلاة القادمة هي صبح الغد
-        if (!next) {
-            let [h, m] = pTimes["الصبح"].split(':').map(Number);
-            next = new Date(); 
-            next.setDate(next.getDate() + 1); 
-            next.setHours(h, m, 0);
-            name = "الصبح";
-        }
-
-        // حساب الفارق
-        const diff = next - now;
-        const hh = Math.floor(diff / 3600000);
-        const mm = Math.floor((diff % 3600000) / 60000);
-        const ss = Math.floor((diff % 60000) / 1000);
-
-        const timeString = `${String(hh).padStart(2,'0')}:${String(mm).padStart(2,'0')}:${String(ss).padStart(2,'0')}`;
-        document.getElementById('nextPrayerCounter').innerText = `باقي لـ ${name} - ${timeString}`;
+        const hLeft = Math.floor(diff / 60);
+        const mLeft = diff % 60;
+        document.getElementById('nextPrayerCounter').innerText = `باقي على ${nextPrayerName}: ${hLeft}س ${mLeft}د`;
     }
 
     function togglePrayerMenu() {
         const menu = document.getElementById('prayerMenu');
         menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
     }
+    // --- Prayer Times Logic (End) ---
 
-    // === 3. منطق عمل التطبيق وبناء الواجهة ===
     function checkDay() {
         const now = new Date();
         const today = now.toLocaleDateString();
+        const options = { weekday: 'long', year: 'numeric', month: 'numeric', day: 'numeric' };
+        document.getElementById('dateText').innerText = now.toLocaleDateString('ar-EG', options);
         
-        const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-        const displayDate = now.toLocaleDateString('ar-EG', options);
-        
-        // تصفير البيانات إذا كان اليوم جديداً
         if(db.lastUpdate !== today) {
             db.sins.forEach(i => i.d = false);
             db.obeys.forEach(i => i.d = false);
             db.lastUpdate = today;
             sync();
         }
-        document.getElementById('dateText').innerText = displayDate;
     }
 
     function setTab(t) {
@@ -408,33 +398,22 @@
     function render() {
         const container = document.getElementById('list');
         container.innerHTML = '';
-
         if(activeTab === 'cfg') {
             container.innerHTML = `
                 <div class="item-card" onclick="exportData()"><b>📥 تصدير نسخة احتياطية</b></div>
                 <div class="item-card" onclick="fullReset()" style="color:var(--sin-color)"><b>🧹 مسح شامل للبيانات</b></div>
-                <p style="text-align:center; color:#ccc; font-size:12px;">نسخة التطبيق V5.6 Platinum</p>
+                <p style="text-align:center; color:#ccc; font-size:12px;">نسخة التطبيق V5.7 Platinum</p>
             `;
             return;
         }
-
         db[activeTab].forEach((item, i) => {
             const card = document.createElement('div');
             card.className = `item-card ${item.d ? 'done' : ''}`;
-            
             const btnClass = item.d ? (activeTab === 'sins' ? 'active-s' : 'active-o') : '';
             const mark = item.d ? (activeTab === 'sins' ? '✕' : '✓') : '';
-
-            card.innerHTML = `
-                <div class="item-info">
-                    <b>${item.n}</b>
-                    <span>${item.nt || 'لا توجد ملاحظات'}</span>
-                </div>
-                <div class="btns">
-                    <button class="btn btn-note" onclick="openEdit(${i})">📝</button>
-                    <button class="btn btn-check ${btnClass}" onclick="toggle(${i})">${mark}</button>
-                </div>
-            `;
+            card.innerHTML = `<div class="item-info"><b>${item.n}</b><span>${item.nt || 'لا توجد ملاحظات'}</span></div>
+                <div class="btns"><button class="btn btn-note" onclick="openEdit(${i})">📝</button>
+                <button class="btn btn-check ${btnClass}" onclick="toggle(${i})">${mark}</button></div>`;
             container.appendChild(card);
         });
         updateP();
@@ -442,14 +421,13 @@
 
     function toggle(i) {
         db[activeTab][i].d = !db[activeTab][i].d;
-        if(window.navigator.vibrate) window.navigator.vibrate(15); // اهتزاز خفيف عند الإنجاز
+        if(window.navigator.vibrate) window.navigator.vibrate(15);
         sync(); render();
     }
 
     function updateP() {
         const s = db.sins.filter(x => x.d).length;
         const o = db.obeys.filter(x => x.d).length;
-        // خوارزمية شريط التقدم الخاصة بك
         let p = 50 + (o * 8) - (s * 10);
         p = Math.max(5, Math.min(100, p));
         const bar = document.getElementById('pBar');
@@ -460,8 +438,7 @@
     function openAdd() {
         editIdx = null;
         document.getElementById('mTitle').innerText = "إضافة عمل جديد";
-        document.getElementById('mName').value = "";
-        document.getElementById('mNote').value = "";
+        document.getElementById('mName').value = ""; document.getElementById('mNote').value = "";
         document.getElementById('deleteBtn').style.display = "none";
         document.getElementById('overlay').style.display = "flex";
     }
@@ -470,52 +447,37 @@
         editIdx = i;
         const item = db[activeTab][i];
         document.getElementById('mTitle').innerText = "تعديل البيانات";
-        document.getElementById('mName').value = item.n;
-        document.getElementById('mNote').value = item.nt;
+        document.getElementById('mName').value = item.n; document.getElementById('mNote').value = item.nt;
         document.getElementById('deleteBtn').style.display = "block";
         document.getElementById('overlay').style.display = "flex";
     }
 
     function saveData() {
-        const n = document.getElementById('mName').value.trim();
-        const nt = document.getElementById('mNote').value.trim();
+        const n = document.getElementById('mName').value;
+        const nt = document.getElementById('mNote').value;
         if(!n) return;
-
-        if(editIdx !== null) {
-            db[activeTab][editIdx].n = n;
-            db[activeTab][editIdx].nt = nt;
-        } else {
-            db[activeTab].push({n:n, d:false, nt:nt});
-        }
+        if(editIdx !== null) { db[activeTab][editIdx].n = n; db[activeTab][editIdx].nt = nt; }
+        else { db[activeTab].push({n:n, d:false, nt:nt}); }
         sync(); closeModal(); render();
     }
 
     function deleteCurrent() {
-        if(confirm("حذف هذا العمل نهائياً؟")){
-            db[activeTab].splice(editIdx, 1);
-            sync(); closeModal(); render();
-        }
+        if(confirm("حذف هذا العمل؟")){ db[activeTab].splice(editIdx, 1); sync(); closeModal(); render(); }
     }
 
-    function closeModal() { 
-        document.getElementById('overlay').style.display = "none"; 
-    }
-    
-    function sync() { 
-        localStorage.setItem('mizan_pro_v5', JSON.stringify(db)); 
-    }
-    
+    function closeModal() { document.getElementById('overlay').style.display = "none"; }
+    function sync() { localStorage.setItem('mizan_pro_v5', JSON.stringify(db)); }
     function exportData() {
         const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(db));
-        const a = document.createElement('a'); a.href = dataStr;
-        a.download = "mizan_backup.json"; a.click();
+        const a = document.createElement('a'); a.href = dataStr; a.download = "mizan_backup.json"; a.click();
     }
+    function fullReset() { if(confirm("سيتم مسح كل شيء؟")){ localStorage.clear(); location.reload(); } }
 
-    function fullReset() {
-        if(confirm("سيتم مسح كل شيء.. هل أنت متأكد؟")){
-            localStorage.clear(); location.reload();
-        }
-    }
+    window.onload = () => { 
+        checkDay(); render(); initPrayerService(); 
+    };
+</script>
 
-    // بدء التشغيل
-    window.onload
+</body>
+    </html>
+    
