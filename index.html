@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ميقات | Meeqat</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;500;800&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Tajawal', sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
+            color: white;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0;
+        }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 2.5rem;
+            width: 90%;
+            max-width: 400px;
+            padding: 2rem;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+        }
+        .time-row {
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 1.2rem;
+            padding: 1rem;
+            margin-top: 0.8rem;
+            display: flex;
+            justify-content: space-between;
+            transition: 0.3s;
+        }
+        .active-prayer {
+            border: 1px solid #ffd700;
+            background: rgba(255, 215, 0, 0.1);
+        }
+        .loader {
+            width: 18px; height: 18px;
+            border: 2px solid #ffffff33;
+            border-top-color: #ffd700;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+
+    <div class="glass-card text-center">
+        <div id="hijri-date" class="text-lg opacity-80 mb-6">جاري التحميل...</div>
+        
+        <div class="mb-8">
+            <h2 id="next-p-name" class="text-sm opacity-60">الصلاة القادمة</h2>
+            <div id="countdown" class="text-5xl font-bold my-2 tracking-tighter">00:00:00</div>
+            <div id="current-time" class="text-xs opacity-40 italic">--:--:--</div>
+        </div>
+
+        <div class="space-y-2">
+            <div id="c-fajr" class="time-row"><span>الصبح (+35د)</span><span id="t-fajr">--:--</span></div>
+            <div id="c-dhuhr" class="time-row"><span>الظهر (+10د)</span><span id="t-dhuhr">--:--</span></div>
+            <div id="c-maghrib" class="time-row"><span>المغرب</span><span id="t-maghrib">--:--</span></div>
+        </div>
+
+        <div id="status" class="mt-6 text-[10px] opacity-40">
+            <span class="loader"></span> جاري تحديث البيانات...
+        </div>
+    </div>
+
+    <script>
+        let pTimes = {};
+        const OFFSETS = { Fajr: 35, Dhuhr: 10, Maghrib: 0 };
+
+        async function init() {
+            // محاولة جلب الموقع، وإذا فشل خلال 4 ثوانٍ نستخدم موقعاً افتراضياً
+            const timeout = setTimeout(() => {
+                console.log("Using default location due to timeout");
+                fetchData(33.3152, 44.3661); // بغداد كموقع افتراضي
+            }, 4000);
+
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(pos => {
+                    clearTimeout(timeout);
+                    fetchData(pos.coords.latitude, pos.coords.longitude);
+                }, () => {
+                    clearTimeout(timeout);
+                    fetchData(33.3152, 44.3661);
+                });
+            }
+        }
+
+        async function fetchData(lat, lng) {
+            try {
+                const res = await fetch(`https://api.aladhan.com/v1/timings?latitude=${lat}&longitude=${lng}&method=0`);
+                const json = await res.json();
+                const t = json.data.timings;
+                
+                pTimes = {
+                    "الصبح": adjust(t.Fajr, OFFSETS.Fajr),
+                    "الظهر": adjust(t.Dhuhr, OFFSETS.Dhuhr),
+                    "المغرب": adjust(t.Maghrib, OFFSETS.Maghrib)
+                };
+
+                document.getElementById('hijri-date').innerText = json.data.date.hijri.day + " " + json.data.date.hijri.month.ar + " " + json.data.date.hijri.year;
+                document.getElementById('t-fajr').innerText = pTimes["الصبح"];
+                document.getElementById('t-dhuhr').innerText = pTimes["الظهر"];
+                document.getElementById('t-maghrib').innerText = pTimes["المغرب"];
+                document.getElementById('status').innerText = "تم التحديث بنجاح";
+                
+                runClock();
+            } catch (e) {
+                document.getElementById('status').innerText = "خطأ في الشبكة";
+            }
+        }
+
+        function adjust(time, mins) {
+            let [h, m] = time.split(':').map(Number);
+            let d = new Date();
+            d.setHours(h, m + mins, 0);
+            return d.toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit', hour12:false});
+        }
+
+        function runClock() {
+            setInterval(() => {
+                const now = new Date();
+                document.getElementById('current-time').innerText = now.toLocaleTimeString('ar-EG');
+                
+                let next = null; let name = "";
+                for (const [n, t] of Object.entries(pTimes)) {
+                    let [h, m] = t.split(':');
+                    let pd = new Date(); pd.setHours(h, m, 0);
+                    if (pd > now) { next = pd; name = n; break; }
+                }
+
+                if (!next) {
+                    let [h, m] = pTimes["الصبح"].split(':');
+                    next = new Date(); next.setDate(next.getDate()+1); next.setHours(h, m, 0);
+                    name = "الصبح";
+                }
+
+                const diff = next - now;
+                const hh = Math.floor(diff / 3600000);
+                const mm = Math.floor((diff % 3600000) / 60000);
+                const ss = Math.floor((diff % 60000) / 1000);
+
+                document.getElementById('countdown').innerText = 
+                    `${String(hh).padStart(2,'0')}:${String(mm).padStart(2,'0')}:${String(ss).padStart(2,'0')}`;
+                document.getElementById('next-p-name').innerText = `الصلاة القادمة: ${name}`;
+                
+                // Highlight
+                const map = {"الصبح":"c-fajr", "الظهر":"c-dhuhr", "المغرب":"c-maghrib"};
+                Object.values(map).forEach(id => document.getElementById(id).classList.remove('active-prayer'));
+                document.getElementById(map[name]).classList.add('active-prayer');
+            }, 1000);
+        }
+
+        init();
+    </script>
+</body>
+</html>
