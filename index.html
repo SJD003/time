@@ -310,9 +310,9 @@
                 // الظهر: +10 دقائق
                 // المغرب: نفس التوقيت الجعفري الرسمي
                 prayerTimes = {
-                    'Fajr': addMinutes(raw.Fajr, 35),
+                    'Fajr': addMinutes(raw.Fajr, 30),
                     'Dhuhr': addMinutes(raw.Dhuhr, 10),
-                    'Maghrib': raw.Maghrib
+                    'Maghrib': addMinutes(raw.Maghrib, 15),
                 };
                 
                 document.getElementById('t-fajr').innerText = convertTime(prayerTimes.Fajr);
