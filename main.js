@@ -57,7 +57,7 @@
                 // الظهر: +10 دقائق
                 // المغرب: نفس التوقيت الجعفري الرسمي
                 prayerTimes = {
-                    'Fajr': addMinutes(raw.Fajr, 30),
+                    'Fajr': addMinutes(raw.Fajr, 20),
                     'Dhuhr': addMinutes(raw.Dhuhr, 10),
                     'Maghrib': addMinutes(raw.Maghrib,15),
                 };
