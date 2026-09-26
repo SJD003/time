@@ -59,7 +59,7 @@
                 prayerTimes = {
                     'Fajr': addMinutes(raw.Fajr, 20),
                     'Dhuhr': addMinutes(raw.Dhuhr, 10),
-                    'Maghrib': addMinutes(raw.Maghrib,15),
+                    'Maghrib': addMinutes(raw.Maghrib,10),
                 };
                 
                 document.getElementById('t-fajr').innerText = convertTime(prayerTimes.Fajr);
