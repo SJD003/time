@@ -1,0 +1,11 @@
+{
+  "name": "ميزان المحاسبة",
+  "short_name": "الميزان",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#f8f9fd",
+  "theme_color": "#5f27cd",
+  "icons": [
+    { "src": "https://cdn-icons-png.flaticon.com/512/2503/2503508.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}
