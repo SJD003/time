@@ -41,11 +41,15 @@
                 <div class="hijri-date" id="hijriDateDisplay">---</div>
             </div>
             
-            <div class="prayer-dropdown" id="prayerMenu">
-                <div class="p-row"><span>الصبح</span><span id="t-fajr">--:--</span></div>
-                <div class="p-row"><span>الظهر</span><span id="t-dhuhr">--:--</span></div>
-                <div class="p-row"><span>المغرب</span><span id="t-maghrib">--:--</span></div>
-            </div>
+          <div class="prayer-dropdown" id="prayerMenu">
+    <div class="p-row"><span>الصبح</span><span id="t-fajr">--:--</span></div>
+    <div class="p-row"><span>الظهر</span><span id="t-dhuhr">--:--</span></div>
+    <div class="p-row"><span>المغرب</span><span id="t-maghrib">--:--</span></div>
+    <div style="margin-top:12px; border-top:1px dashed #eee; padding-top:12px;">
+        <button id="btnLocate" onclick="requestLocation()" style="width:100%; padding:10px; border:none; border-radius:12px; background:#f1f2f6; color:var(--primary); font-family:inherit; font-weight:700; cursor:pointer;">📍 تحديث موقعي الحالي</button>
+        <div id="locStatus" style="text-align:center; font-size:11px; color:#aaa; margin-top:6px;">اضغط لتحديد موقعك بدقة</div>
+    </div>
+</div>
         </div>
         <div class="tabs">
             <button class="tab active" id="tab-sins" onclick="setTab('sins')">🛑 المعاصي</button>
