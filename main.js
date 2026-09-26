@@ -9,70 +9,108 @@
     let editIdx = null;
 
     // --- Prayer Times & Hijri Logic (Start) ---
-    let prayerTimes = null;
+ let prayerTimes = null;
+const DEFAULT_COORDS = { lat: 31.8481, lng: 46.0664 }; // قلعة سكر
 
-    // دالة لإضافة دقائق للوقت بصيغة 24 ساعة
-    function addMinutes(timeStr, minsToAdd) {
-        let [h, m] = timeStr.split(':').map(Number);
-        let date = new Date();
-        date.setHours(h, m + minsToAdd, 0, 0);
-        return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+function addMinutes(timeStr, minsToAdd) {
+    let [h, m] = timeStr.split(':').map(Number);
+    let date = new Date();
+    date.setHours(h, m + minsToAdd, 0, 0);
+    return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+}
+
+function initPrayerService() {
+    updateHijriDate();
+    // 1. اعرض مباشرة من الموقع المحفوظ ان وجد
+    const cached = JSON.parse(localStorage.getItem('mizan_last_loc') || 'null');
+    if (cached) {
+        fetchPrayerTimes(cached.lat, cached.lng, true);
+        document.getElementById('locStatus').innerText = `موقع محفوظ: ${cached.lat.toFixed(2)}, ${cached.lng.toFixed(2)}`;
+    } else {
+        fetchPrayerTimes(DEFAULT_COORDS.lat, DEFAULT_COORDS.lng, false);
+    }
+}
+
+// هذه هي الدالة الجديدة التي يجب ان تُستدعى بضغطة زر - وهذا هو سر عملها على الهاتف
+function requestLocation() {
+    const counterEl = document.getElementById('nextPrayerCounter');
+    const statusEl = document.getElementById('locStatus');
+
+    if (!window.isSecureContext) {
+        alert("تنبيه: خدمات الموقع لا تعمل إلا على رابط آمن https. ارفع موقعك على استضافة تدعم https");
+        return;
+    }
+    if (!navigator.geolocation) {
+        statusEl.innerText = "متصفحك لا يدعم تحديد الموقع";
+        return;
     }
 
-    function initPrayerService() {
-        updateHijriDate();
-        if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(
-                (pos) => fetchPrayerTimes(pos.coords.latitude, pos.coords.longitude),
-                (err) => {
-                    document.getElementById('nextPrayerCounter').innerText = "تم استخدام الموقع الافتراضي";
-                    // إحداثيات افتراضية (قلعة سكر) في حال رفض الموقع
-                    fetchPrayerTimes(31.8481, 46.0664); 
-                }
-            );
-        } else {
-            fetchPrayerTimes(31.8481, 46.0664);
+    counterEl.innerText = "جاري تحديد موقعك...";
+    statusEl.innerText = "يرجى الموافقة على طلب الموقع";
+
+    navigator.geolocation.getCurrentPosition(
+        (pos) => {
+            const { latitude, longitude } = pos.coords;
+            localStorage.setItem('mizan_last_loc', JSON.stringify({ lat: latitude, lng: longitude }));
+            statusEl.innerText = "تم تحديد الموقع بنجاح ✓";
+            fetchPrayerTimes(latitude, longitude, true);
+            if(navigator.vibrate) navigator.vibrate(50);
+        },
+        (err) => {
+            console.log(err);
+            let msg = "";
+            if (err.code === 1) msg = "تم رفض الإذن. فعل GPS والموقع من إعدادات المتصفح";
+            else if (err.code === 2) msg = "تعذر تحديد الموقع، تأكد من تفعيل GPS";
+            else if (err.code === 3) msg = "انتهى وقت الطلب، سيتم المحاولة بدقة أقل";
+            
+            statusEl.innerText = msg;
+            counterEl.innerText = "فشل تحديد الموقع";
+
+            // محاولة ثانية بدقة أقل اذا فشلت الأولى (مهم جدا للهواتف الضعيفة)
+            if (err.code === 3) {
+                navigator.geolocation.getCurrentPosition(
+                    (pos) => {
+                        const { latitude, longitude } = pos.coords;
+                        fetchPrayerTimes(latitude, longitude, true);
+                    },
+                    () => fetchPrayerTimes(DEFAULT_COORDS.lat, DEFAULT_COORDS.lng, false),
+                    { enableHighAccuracy: false, timeout: 10000, maximumAge: 60000 }
+                );
+            }
+        },
+        { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+    );
+}
+
+function updateHijriDate() {
+    const hijri = new Intl.DateTimeFormat('ar-SA-u-ca-islamic-civil', { day: 'numeric', month: 'long', year: 'numeric' }).format(Date.now());
+    document.getElementById('hijriDateDisplay').innerText = hijri;
+}
+
+function fetchPrayerTimes(lat, lng, isPrecise = false) {
+    const date = Math.floor(Date.now() / 1000);
+    const url = `https://api.aladhan.com/v1/timings/${date}?latitude=${lat}&longitude=${lng}&method=0`;
+    fetch(url).then(res => res.json()).then(data => {
+        const raw = data.data.timings;
+        prayerTimes = {
+            'Fajr': addMinutes(raw.Fajr, 20),
+            'Dhuhr': addMinutes(raw.Dhuhr, 10),
+            'Maghrib': addMinutes(raw.Maghrib, 10),
+        };
+        document.getElementById('t-fajr').innerText = convertTime(prayerTimes.Fajr);
+        document.getElementById('t-dhuhr').innerText = convertTime(prayerTimes.Dhuhr);
+        document.getElementById('t-maghrib').innerText = convertTime(prayerTimes.Maghrib);
+        if(!isPrecise && !localStorage.getItem('mizan_last_loc')){
+            document.getElementById('nextPrayerCounter').innerText = "الموقع الافتراضي (اضغط للتحديث)";
         }
-    }
-
-    function updateHijriDate() {
-        const hijri = new Intl.DateTimeFormat('ar-SA-u-ca-islamic-civil', {
-            day: 'numeric', month: 'long', year: 'numeric'
-        }).format(Date.now());
-        document.getElementById('hijriDateDisplay').innerText = hijri;
-    }
-
-    function fetchPrayerTimes(lat, lng) {
-        const date = Math.floor(Date.now() / 1000);
-        // Method 0 = Shia Ithna-Ashari
-        const url = `https://api.aladhan.com/v1/timings/${date}?latitude=${lat}&longitude=${lng}&method=0`;
-
-        fetch(url)
-            .then(res => res.json())
-            .then(data => {
-                const raw = data.data.timings;
-                
-                // تطبيق القواعد الخاصة بك:
-                // الصبح: +35 دقيقة
-                // الظهر: +10 دقائق
-                // المغرب: نفس التوقيت الجعفري الرسمي
-                prayerTimes = {
-                    'Fajr': addMinutes(raw.Fajr, 20),
-                    'Dhuhr': addMinutes(raw.Dhuhr, 10),
-                    'Maghrib': addMinutes(raw.Maghrib,10),
-                };
-                
-                document.getElementById('t-fajr').innerText = convertTime(prayerTimes.Fajr);
-                document.getElementById('t-dhuhr').innerText = convertTime(prayerTimes.Dhuhr);
-                document.getElementById('t-maghrib').innerText = convertTime(prayerTimes.Maghrib);
-                
-                setInterval(updateCountdown, 1000);
-                updateCountdown();
-            })
-            .catch(e => {
-                document.getElementById('nextPrayerCounter').innerText = "خطأ في الاتصال";
-            });
-    }
+        if (window.prayerInterval) clearInterval(window.prayerInterval);
+        window.prayerInterval = setInterval(updateCountdown, 1000);
+        updateCountdown();
+    }).catch(e => {
+        document.getElementById('nextPrayerCounter').innerText = "خطأ في الاتصال";
+    });
+}
+// باقي دوال convertTime و updateCountdown و togglePrayerMenu تبقى كما هي
 
     function convertTime(time24) {
         let [h, m] = time24.split(':');
