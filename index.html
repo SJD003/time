@@ -24,13 +24,14 @@
 </style>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>ميزان - قلعة سكر</title>
+<title>ميزان V6 - النجف الأشرف - فلكي</title>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#1a1a1a">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
 <div class="app">
+  <div id="offlineIndicator" class="offline-indicator" style="display:none"></div>
   <header>
     <div class="top-row">
       <div>
@@ -42,14 +43,14 @@
     
     <div id="prayerMenu" class="prayer-menu">
       <div class="prayer-grid">
-        <div class="p-item"><span>الفجر</span><b id="t-fajr">--:--</b></div>
+        <div class="p-item"><span>الفجر (قبل الشروق بساعة)</span><b id="t-fajr">--:--</b></div>
         <div class="p-item"><span>الظهر</span><b id="t-dhuhr">--:--</b></div>
         <div class="p-item"><span>العصر</span><b id="t-asr">--:--</b></div>
         <div class="p-item"><span>المغرب</span><b id="t-maghrib">--:--</b></div>
         <div class="p-item"><span>العشاء</span><b id="t-isha">--:--</b></div>
       </div>
       <div class="loc-row">
-        <span id="locStatus">الموقع الافتراضي - قلعة سكر</span>
+        <span id="locStatus">الموقع الافتراضي: النجف الأشرف</span>
         <button onclick="requestLocation()" class="loc-btn">📍 تحديث موقعي</button>
       </div>
       <div class="notify-row">
@@ -58,18 +59,18 @@
       </div>
     </div>
 
-    <div id="nextPrayerCounter" class="counter">جاري تحميل أوقات الصلاة...</div>
+    <div id="nextPrayerCounter" class="counter">جاري الحساب الفلكي للنجف الأشرف...</div>
     <div class="progress-wrap"><div id="pBar" class="progress-bar"></div></div>
   </header>
 
   <nav class="tabs">
     <button id="tab-sins" class="tab active" onclick="setTab('sins')">⚠️ ذنوب</button>
     <button id="tab-obeys" class="tab" onclick="setTab('obeys')">✨ طاعات</button>
+    <button id="tab-qibla" class="tab" onclick="setTab('qibla')">🕋 القبلة</button>
     <button id="tab-cfg" class="tab" onclick="setTab('cfg')">⚙️ إعدادات</button>
   </nav>
 
   <main id="list" class="list"></main>
-
   <button id="fab" class="fab" onclick="openAdd()">+</button>
 
   <div id="overlay" class="overlay" style="display:none">
@@ -87,12 +88,9 @@
 </div>
 <script src="main.js"></script>
 <script>
-// تسجيل Service Worker
 if('serviceWorker' in navigator){
   window.addEventListener('load', ()=>{
-    navigator.serviceWorker.register('pwabuilder-sw.js').then(reg=>{
-      console.log('SW registered', reg.scope);
-    });
+    navigator.serviceWorker.register('pwabuilder-sw.js').then(reg=>{ console.log('SW registered'); });
   });
 }
 </script>
