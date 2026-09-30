@@ -1,4 +1,4 @@
-let db = JSON.parse(localStorage.getItem('mizan_pro_v5')) || {
+let db = JSON.parse(localStorage.getItem('mizan_pro_v5') || 'null') || {
     sins: [{n:"الغيبة", d:false, nt:""}],
     obeys: [{n:"الصلوات الخمس", d:false, nt:""}],
     lastUpdate: new Date().toLocaleDateString()
@@ -11,7 +11,6 @@ let editIdx = null;
 const PRAYER_AR = { 'Fajr': 'الفجر', 'Dhuhr': 'الظهر', 'Asr': 'العصر', 'Maghrib': 'المغرب', 'Isha': 'العشاء' };
 let notifiedCache = JSON.parse(localStorage.getItem('mizan_notified_today') || '{}');
 
-// دالة طلب إذن الإشعارات - لازم تنربط بزر
 async function requestPrayerNotifications() {
     if (!('Notification' in window)) {
         alert('متصفحك لا يدعم الإشعارات');
@@ -26,43 +25,41 @@ async function requestPrayerNotifications() {
         localStorage.setItem('mizan_notify_enabled', 'true');
         if(navigator.vibrate) navigator.vibrate([100,50,100]);
         alert('✅ تم تفعيل إشعارات الصلاة! راح يجيك إشعار "حان وقت صلاة..."');
-        // إشعار تجريبي
         sendPrayerNotification('Dhuhr');
-        render(); // تحديث واجهة الإعدادات
+        render();
+        updateNotifyUI();
     } else {
         alert('❌ تم رفض الإشعارات من إعدادات المتصفح');
     }
 }
 
-// دالة إرسال الإشعار الفعلي
 async function sendPrayerNotification(enName) {
-    if (Notification.permission!== 'granted') return;
-    if (localStorage.getItem('mizan_notify_enabled')!== 'true') return;
+    if (Notification.permission !== 'granted') return;
+    if (localStorage.getItem('mizan_notify_enabled') !== 'true') return;
     if (localStorage.getItem(`notify-${enName}`) === 'false') return;
 
     const arName = PRAYER_AR[enName] || enName;
     const reg = await navigator.serviceWorker.ready;
 
     reg.showNotification(`حان وقت صلاة ${arName}`, {
-        body: `حان الآن موعد أذان ${arName} - ${document.getElementById('hijriDateDisplay')?.innerText || ''}`,
+        body: `حان الآن موعد أذان ${arName} - قلعة سكر`,
         icon: './icons/icon-192.png',
         badge: './icons/icon-72.png',
         vibrate: [200, 100, 200, 100, 200],
         requireInteraction: true,
-        tag: `prayer-${enName}-${new Date().toDateString()}`, // يمنع التكرار بنفس اليوم
+        tag: `prayer-${enName}-${new Date().toDateString()}`,
         data: { prayer: enName },
         silent: false
     });
 }
 
-// فحص هل حان وقت صلاة؟
 function checkPrayerNotification(currentMinutes) {
     if (!prayerTimes) return;
-    if (Notification.permission!== 'granted') return;
+    if (Notification.permission !== 'granted') return;
+    if (localStorage.getItem('mizan_notify_enabled') !== 'true') return;
 
     const today = new Date().toDateString();
-    // تصفير السجل عند يوم جديد
-    if (localStorage.getItem('mizan_notify_date')!== today) {
+    if (localStorage.getItem('mizan_notify_date') !== today) {
         notifiedCache = {};
         localStorage.setItem('mizan_notify_date', today);
         localStorage.setItem('mizan_notified_today', JSON.stringify({}));
@@ -71,8 +68,6 @@ function checkPrayerNotification(currentMinutes) {
     for (const [enName, timeStr] of Object.entries(prayerTimes)) {
         const [h, m] = timeStr.split(':').map(Number);
         const prayerMins = h * 60 + m;
-
-        // إذا الوقت الحالي يطابق وقت الصلاة تماماً ولم نرسل إشعار اليوم
         if (currentMinutes === prayerMins) {
             const key = `${today}_${enName}`;
             if (!notifiedCache[key]) {
@@ -84,9 +79,8 @@ function checkPrayerNotification(currentMinutes) {
     }
 }
 
-// --- Prayer Times & Hijri Logic ---
 let prayerTimes = null;
-const DEFAULT_COORDS = { lat: 31.8481, lng: 46.0664 }; // قلعة سكر
+const DEFAULT_COORDS = { lat: 31.8481, lng: 46.0664 };
 
 function addMinutes(timeStr, minsToAdd) {
     let [h, m] = timeStr.split(':').map(Number);
@@ -100,7 +94,8 @@ function initPrayerService() {
     const cached = JSON.parse(localStorage.getItem('mizan_last_loc') || 'null');
     if (cached) {
         fetchPrayerTimes(cached.lat, cached.lng, true);
-        document.getElementById('locStatus').innerText = `موقع محفوظ: ${cached.lat.toFixed(2)}, ${cached.lng.toFixed(2)}`;
+        const el = document.getElementById('locStatus');
+        if(el) el.innerText = `موقع محفوظ: ${cached.lat.toFixed(2)}, ${cached.lng.toFixed(2)}`;
     } else {
         fetchPrayerTimes(DEFAULT_COORDS.lat, DEFAULT_COORDS.lng, false);
     }
@@ -112,7 +107,7 @@ function updateNotifyUI(){
     if(!el) return;
     if(Notification.permission === 'granted' && localStorage.getItem('mizan_notify_enabled') === 'true'){
         el.innerText = '✅ الإشعارات مفعلة';
-        el.style.color = 'var(--obey-color)';
+        el.style.color = '#2ecc71';
     } else {
         el.innerText = '🔕 غير مفعلة - اضغط تفعيل';
         el.style.color = '#999';
@@ -185,22 +180,23 @@ function fetchPrayerTimes(lat, lng, isPrecise = false) {
         document.getElementById('t-asr') && (document.getElementById('t-asr').innerText = convertTime(prayerTimes.Asr));
         document.getElementById('t-maghrib') && (document.getElementById('t-maghrib').innerText = convertTime(prayerTimes.Maghrib));
         document.getElementById('t-isha') && (document.getElementById('t-isha').innerText = convertTime(prayerTimes.Isha));
-
-        if(!isPrecise &&!localStorage.getItem('mizan_last_loc')){
-            document.getElementById('nextPrayerCounter').innerText = "الموقع الافتراضي (اضغط للتحديث)";
+        if(!isPrecise && !localStorage.getItem('mizan_last_loc')){
+            const c = document.getElementById('nextPrayerCounter');
+            if(c) c.innerText = "الموقع الافتراضي (اضغط للتحديث)";
         }
         if (window.prayerInterval) clearInterval(window.prayerInterval);
         window.prayerInterval = setInterval(updateCountdown, 1000);
         updateCountdown();
     }).catch(e => {
-        document.getElementById('nextPrayerCounter').innerText = "خطأ في الاتصال";
+        const c = document.getElementById('nextPrayerCounter');
+        if(c) c.innerText = "خطأ في الاتصال";
     });
 }
 
 function convertTime(time24) {
     let [h, m] = time24.split(':');
     h = parseInt(h);
-    const suffix = h >= 12? 'م' : 'ص';
+    const suffix = h >= 12 ? 'م' : 'ص';
     h = h % 12 || 12;
     return `${h}:${m} ${suffix}`;
 }
@@ -213,7 +209,9 @@ function updateCountdown() {
 
     const tFajr = getMinutes(prayerTimes.Fajr);
     const tDhuhr = getMinutes(prayerTimes.Dhuhr);
+    const tAsr = getMinutes(prayerTimes.Asr);
     const tMaghrib = getMinutes(prayerTimes.Maghrib);
+    const tIsha = getMinutes(prayerTimes.Isha);
 
     let nextPrayerName = "";
     let diff = 0;
@@ -222,76 +220,87 @@ function updateCountdown() {
         nextPrayerName = "الصبح"; diff = tFajr - currentTime;
     } else if (currentTime < tDhuhr) {
         nextPrayerName = "الظهر"; diff = tDhuhr - currentTime;
+    } else if (currentTime < tAsr) {
+        nextPrayerName = "العصر"; diff = tAsr - currentTime;
     } else if (currentTime < tMaghrib) {
         nextPrayerName = "المغرب"; diff = tMaghrib - currentTime;
+    } else if (currentTime < tIsha) {
+        nextPrayerName = "العشاء"; diff = tIsha - currentTime;
     } else {
         nextPrayerName = "الصبح"; diff = (24 * 60 - currentTime) + tFajr;
     }
+
     const hLeft = Math.floor(diff / 60);
     const mLeft = diff % 60;
-    document.getElementById('nextPrayerCounter').innerText = `باقي على ${nextPrayerName}: ${hLeft}س ${mLeft}د`;
+    const counter = document.getElementById('nextPrayerCounter');
+    if(counter) counter.innerText = `باقي على ${nextPrayerName}: ${hLeft}س ${mLeft}د`;
 
-    // --- هذا السطر الجديد هو اللي يفحص الإشعار ---
     checkPrayerNotification(currentTime);
 }
 
-// باقي دوالك تبقى نفسها...
 function togglePrayerMenu() {
     const menu = document.getElementById('prayerMenu');
-    menu.style.display = menu.style.display === 'block'? 'none' : 'block';
+    menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
 }
+
 function checkDay() {
     const now = new Date();
     const today = now.toLocaleDateString();
     const options = { weekday: 'long', year: 'numeric', month: 'numeric', day: 'numeric' };
-    document.getElementById('dateText').innerText = now.toLocaleDateString('ar-EG', options);
-    if(db.lastUpdate!== today) {
+    const dt = document.getElementById('dateText');
+    if(dt) dt.innerText = now.toLocaleDateString('ar-EG', options);
+    if(db.lastUpdate !== today) {
         db.sins.forEach(i => i.d = false);
         db.obeys.forEach(i => i.d = false);
         db.lastUpdate = today;
         sync();
     }
 }
+
 function setTab(t) {
     activeTab = t;
     document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
-    document.getElementById(`tab-${t}`).classList.add('active');
-    document.getElementById('fab').style.display = (t === 'cfg')? 'none' : 'flex';
+    document.getElementById(`tab-${t}`)?.classList.add('active');
+    const fab = document.getElementById('fab');
+    if(fab) fab.style.display = (t === 'cfg') ? 'none' : 'flex';
     render();
 }
+
 function render() {
     const container = document.getElementById('list');
+    if(!container) return;
     container.innerHTML = '';
     if(activeTab === 'cfg') {
         container.innerHTML = `
-            <div class="item-card" style="flex-direction:column; align-items:flex-start; gap:10px">
+            <div class="item-card" style="flex-direction:column; align-items:flex-start; gap:12px">
                 <b>🔔 إشعارات الصلاة</b>
-                <div style="display:flex; gap:10px; align-items:center">
-                    <button class="btn" style="background:var(--primary); color:#fff; padding:8px 15px; border-radius:8px; border:none" onclick="requestPrayerNotifications()">تفعيل الإشعارات</button>
-                    <span id="notifyStatus"></span>
+                <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap">
+                    <button class="btn-save" onclick="requestPrayerNotifications()">تفعيل الإشعارات</button>
+                    <span id="notifyStatus" class="notify-status"></span>
                 </div>
-                <small style="color:#888">سيصلك إشعار "حان وقت صلاة..." عند كل أذان</small>
-                <div style="margin-top:10px; display:flex; flex-direction:column; gap:5px">
+                <small style="color:#888">سيصلك إشعار "حان وقت صلاة..." عند كل أذان حتى لو التطبيق مغلق (على أندرويد)</small>
+                <div style="margin-top:10px; display:flex; flex-direction:column; gap:8px; width:100%">
                     ${Object.entries(PRAYER_AR).map(([en, ar])=>`
-                        <label style="display:flex; justify-content:space-between; width:100%"><span>${ar}</span>
-                        <input type="checkbox" ${localStorage.getItem(`notify-${en}`)!=='false'? 'checked' : ''} onchange="localStorage.setItem('notify-${en}', this.checked)">
+                        <label style="display:flex; justify-content:space-between; width:100%; background:rgba(0,0,0,0.05); padding:8px 12px; border-radius:8px">
+                            <span>إشعار صلاة ${ar}</span>
+                            <input type="checkbox" ${localStorage.getItem(`notify-${en}`)!=='false'? 'checked' : ''} onchange="localStorage.setItem('notify-${en}', this.checked)">
                         </label>
                     `).join('')}
                 </div>
-                <button onclick="sendPrayerNotification('Dhuhr')" style="margin-top:10px">▶ تجربة إشعار الظهر الآن</button>
+                <button onclick="sendPrayerNotification('Dhuhr')" class="btn-cancel" style="margin-top:10px">▶ تجربة إشعار الظهر الآن</button>
             </div>
             <div class="item-card" onclick="exportData()"><b>📥 تصدير نسخة احتياطية</b></div>
             <div class="item-card" onclick="fullReset()" style="color:var(--sin-color)"><b>🧹 مسح شامل للبيانات</b></div>
-            <p style="text-align:center; color:#ccc; font-size:12px;">نسخة التطبيق V5.8 مع الإشعارات</p>
+            <p style="text-align:center; color:#aaa; font-size:11px; margin-top:20px">ميزان - نسخة V5.8 مع الإشعارات - قلعة سكر</p>
         `;
         setTimeout(updateNotifyUI, 100);
         return;
     }
     db[activeTab].forEach((item, i) => {
         const card = document.createElement('div');
-        card.className = `item-card ${item.d? 'done' : ''}`;
-        const btnClass = item.d? (activeTab === 'sins'? 'active-s' : 'active-o') : '';
-        const mark = item.d? (activeTab === 'sins'? '✕' : '✓') : '';
+        card.className = `item-card ${item.d ? 'done' : ''}`;
+        const btnClass = item.d ? (activeTab === 'sins' ? 'active-s' : 'active-o') : '';
+        const mark = item.d ? (activeTab === 'sins' ? '✕' : '✓') : '';
         card.innerHTML = `<div class="item-info"><b>${item.n}</b><span>${item.nt || 'لا توجد ملاحظات'}</span></div>
             <div class="btns"><button class="btn btn-note" onclick="openEdit(${i})">📝</button>
             <button class="btn btn-check ${btnClass}" onclick="toggle(${i})">${mark}</button></div>`;
@@ -299,20 +308,25 @@ function render() {
     });
     updateP();
 }
+
 function toggle(i) {
-    db[activeTab][i].d =!db[activeTab][i].d;
+    db[activeTab][i].d = !db[activeTab][i].d;
     if(window.navigator.vibrate) window.navigator.vibrate(15);
     sync(); render();
 }
+
 function updateP() {
     const s = db.sins.filter(x => x.d).length;
     const o = db.obeys.filter(x => x.d).length;
     let p = 50 + (o * 8) - (s * 10);
     p = Math.max(5, Math.min(100, p));
     const bar = document.getElementById('pBar');
-    bar.style.width = p + '%';
-    bar.style.background = p < 45? 'var(--sin-color)' : (p > 55? 'var(--obey-color)' : 'var(--primary)');
+    if(bar){
+        bar.style.width = p + '%';
+        bar.style.background = p < 45 ? 'var(--sin-color)' : (p > 55 ? 'var(--obey-color)' : 'var(--primary)');
+    }
 }
+
 function openAdd() {
     editIdx = null;
     document.getElementById('mTitle').innerText = "إضافة عمل جديد";
@@ -320,6 +334,7 @@ function openAdd() {
     document.getElementById('deleteBtn').style.display = "none";
     document.getElementById('overlay').style.display = "flex";
 }
+
 function openEdit(i) {
     editIdx = i;
     const item = db[activeTab][i];
@@ -328,25 +343,28 @@ function openEdit(i) {
     document.getElementById('deleteBtn').style.display = "block";
     document.getElementById('overlay').style.display = "flex";
 }
+
 function saveData() {
     const n = document.getElementById('mName').value;
     const nt = document.getElementById('mNote').value;
     if(!n) return;
-    if(editIdx!== null) { db[activeTab][editIdx].n = n; db[activeTab][editIdx].nt = nt; }
+    if(editIdx !== null) { db[activeTab][editIdx].n = n; db[activeTab][editIdx].nt = nt; }
     else { db[activeTab].push({n:n, d:false, nt:nt}); }
     sync(); closeModal(); render();
 }
+
 function deleteCurrent() {
     if(confirm("حذف هذا العمل؟")){ db[activeTab].splice(editIdx, 1); sync(); closeModal(); render(); }
 }
-function closeModal() { document.getElementById('overlay').style.display = "none"; }
+
+function closeModal() { const o=document.getElementById('overlay'); if(o) o.style.display = "none"; }
 function sync() { localStorage.setItem('mizan_pro_v5', JSON.stringify(db)); }
 function exportData() {
-    const dataStr = "data:text/json;charset=utf-8,[STRIPPED] + encodeURIComponent(JSON.stringify(db));
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(db));
     const a = document.createElement('a'); a.href = dataStr; a.download = "mizan_backup.json"; a.click();
 }
 function fullReset() { if(confirm("سيتم مسح كل شيء؟")){ localStorage.clear(); location.reload(); } }
 
-window.onload = () => {
-    checkDay(); render(); initPrayerService();
+window.onload = () => { 
+    checkDay(); render(); initPrayerService(); 
 };
