@@ -12,7 +12,7 @@
     <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
     <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
     <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css"> 
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
 <div class="app-wrapper">
@@ -93,4 +93,23 @@
 </div>
 <div class="modal-overlay" id="overlay">
     <div class="modal-body">
-        <h3 id="mTitle
+        <h3 id="mTitle">إضافة عمل</h3>
+        <input type="text" id="mName" placeholder="اسم العمل...">
+        <textarea id="mNote" placeholder="ملاحظات (اختياري)..." rows="3"></textarea>
+        <button class="save-btn" onclick="saveData()">حفظ البيانات</button>
+        <div id="deleteBtn" class="delete-text" onclick="deleteCurrent()" style="display:none;">حذف هذا العمل نهائياً</div>
+        <div class="delete-text" style="color:#aaa" onclick="closeModal()">إغلاق</div>
+    </div>
+</div>
+<script src="main.js" defer></script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./pwabuilder-sw.js')
+     .then(reg => console.log('SW registered - Offline ready'))
+     .catch(err => console.log('SW failed', err));
+  });
+}
+</script>
+</body>
+</html>
