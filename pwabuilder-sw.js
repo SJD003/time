@@ -1,20 +1,26 @@
-importScripts('https://storage.googleapis.com/workbox-cdn/releases/5.1.2/workbox-sw.js');
-const CACHE = "mizan-cache-v9-offline-astronomical";
-const offlineFallbackPage = "offline.html";
-const PRECACHE_URLS = ["./","./index.html","./style.css","./main.js","./manifest.json","./offline.html","./icons/icon-192.png","./icons/icon-192-maskable.png","./icons/icon-512.png","./icons/icon-512-maskable.png","./icons/apple-touch-icon.png"];
-self.addEventListener("message", (e)=>{ if(e.data&&e.data.type==="SKIP_WAITING") self.skipWaiting(); });
-self.addEventListener('install', (e)=>{ e.waitUntil(caches.open(CACHE).then(c=>c.addAll(PRECACHE_URLS)).then(()=>self.skipWaiting())); });
-self.addEventListener('activate', (e)=>{ e.waitUntil(caches.keys().then(k=>Promise.all(k.filter(x=>x!==CACHE).map(x=>caches.delete(x)))).then(()=>self.clients.claim())); });
-if(workbox.navigationPreload.isSupported()) workbox.navigationPreload.enable();
-self.addEventListener('fetch', (e)=>{
-  if(e.request.mode==='navigate'){
-    e.respondWith((async()=>{
-      try{ const r=await e.preloadResponse; if(r) return r; return await fetch(e.request); }
-      catch(err){ const c=await caches.open(CACHE); return (await c.match(offlineFallbackPage)) || c.match("./index.html"); }
-    })());
-  } else {
-    e.respondWith(caches.match(e.request).then(c=>c||fetch(e.request).then(r=>{
-      const clone=r.clone(); caches.open(CACHE).then(ca=>ca.put(e.request,clone)); return r;
-    })));
+const CACHE='mizan-v8-final';
+const ASSETS=['./','./index.html','./style.css','./main.js','./manifest.json','./offline.html'];
+self.addEventListener('install',e=>{e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS)).catch(()=>{})); self.skipWaiting()});
+self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==CACHE).map(k=>caches.delete(k))))); self.clients.claim()});
+self.addEventListener('fetch',e=>{
+  let req=e.request;
+  if(req.url.includes('api.aladhan.com')){
+    e.respondWith(fetch(req).then(r=>{
+      let cl=r.clone(); caches.open(CACHE).then(c=>c.put(req,cl)).catch(()=>{}); return r;
+    }).catch(()=>caches.match(req).then(c=>c||new Response(JSON.stringify({data:{timings:{Fajr:"04:20",Sunrise:"05:20",Dhuhr:"12:05",Asr:"15:40",Maghrib:"18:50",Isha:"20:15"}}}),{headers:{'Content-Type':'application/json'}}))));
+    return;
   }
+  e.respondWith(caches.match(req).then(r=>r||fetch(req).then(fr=>{
+    if(req.method==='GET' && req.url.startsWith(self.location.origin)){
+      let cl=fr.clone(); caches.open(CACHE).then(c=>c.put(req,cl)).catch(()=>{});
+    }
+    return fr;
+  }).catch(()=>caches.match('./offline.html'))));
+});
+self.addEventListener('notificationclick',e=>{
+  e.notification.close();
+  e.waitUntil(clients.matchAll({type:'window',includeUncontrolled:true}).then(list=>{
+    for(let c of list) if(c.url.includes(self.location.origin) && 'focus' in c) return c.focus();
+    if(clients.openWindow) return clients.openWindow('./');
+  }));
 });
