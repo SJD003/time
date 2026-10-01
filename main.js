@@ -72,9 +72,9 @@ class AstroPrayer {
     return {
       Fajr: this.toHM(addM(sunriseF, -60)),
       Dhuhr: this.toHM(addM(dhuhrF, 10)),
-      Asr: this.toHM(addM(asrF, 10)),
+      Asr: this.toHM(addM(asrF, 0)),
       Maghrib: this.toHM(addM(sunsetF, 10)),
-      Isha: this.toHM(addM(sunsetF + 1.5, 5)),
+      Isha: this.toHM(addM(sunsetF, 40)),
       Sunrise: this.toHM(sunriseF)
     };
   }
