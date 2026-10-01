@@ -198,9 +198,9 @@ function fetchTimes(lat,lng,isPrecise=false,forceOffline=false){
       let final={
         Fajr:addMins(raw.Sunrise,-60),
         Dhuhr:addMins(raw.Dhuhr,10),
-        Asr:addMins(raw.Asr,10),
+        Asr:addMins(raw.Asr,0),
         Maghrib:addMins(raw.Maghrib,10),
-        Isha:addMins(raw.Isha,5),
+        Isha:addMins(raw.Maghrib,40),
         Sunrise:raw.Sunrise
       };
       LS.s('mizan_cached_timings',{timings:final,lat,lng,isPrecise,date:new Date().toLocaleDateString(),ts:Date.now(),src:'api'});
