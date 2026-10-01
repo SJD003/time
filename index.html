@@ -1,113 +1,83 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="theme-color" content="#5f27cd">
-    <meta name="mobile-web-app-capable" content="yes">
-    <title>ميزان المحاسبة</title>
-    <link rel="manifest" href="manifest.json">
-    <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-    <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
-    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>ميزان - النجف الأشرف</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0f0f0f">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
 </head>
 <body>
-<div class="app-wrapper">
-    <header>
-        <div class="header-top">
-            <h1>ميزان المحاسبة</h1>
-            <div class="date-chip" id="dateText">---</div>
-        </div>
-        <div class="progress-box">
-            <div id="pBar"></div>
-        </div>
-    </header>
-    <main class="main-content" id="scrollArea">
-        <div class="wisdom-box">
-            <strong style="color:var(--primary)">الإمام الكاظم (عليه السلام):</strong><br>
-            "ليس منا من لم يحاسب نفسه في كل يوم، فإن عمل خيرا استزاد الله منه وحمد الله عليه، وإن عمل شيئا شرا استغفر الله وتاب إليه."
-        </div>
-        <div class="prayer-bar-container">
-            <div class="prayer-bar" onclick="togglePrayerMenu()">
-                <div class="prayer-time-main" id="nextPrayerCounter">جاري الحساب فلكياً...</div>
-                <div class="hijri-date" id="hijriDateDisplay">---</div>
-            </div>
-            <div class="prayer-dropdown" id="prayerMenu">
-                <div class="p-row"><span>الصبح (قبل الشروق بساعة)</span><span id="t-fajr">--:--</span></div>
-                <div class="p-row"><span>الشروق (فلكي)</span><span id="t-sunrise">--:--</span></div>
-                <div class="p-row"><span>الظهر</span><span id="t-dhuhr">--:--</span></div>
-                <div class="p-row"><span>المغرب (بعد الغروب)</span><span id="t-maghrib">--:--</span></div>
-                <div class="p-row"><span>الغروب (فلكي)</span><span id="t-sunset">--:--</span></div>
-                <div style="margin-top:12px; border-top:1px dashed #eee; padding-top:12px;">
-                    <button id="btnLocate" onclick="requestLocation()">📍 تحديث موقعي الحالي</button>
-                    <div id="locStatus">يعمل بدون إنترنت - فلكي 100%</div>
-                </div>
-            </div>
-        </div>
-        <div class="tabs">
-            <button class="tab active" id="tab-sins" onclick="setTab('sins')">🛑 المعاصي</button>
-            <button class="tab" id="tab-obeys" onclick="setTab('obeys')">✅ الطاعات</button>
-            <button class="tab" id="tab-qibla" onclick="setTab('qibla')">🧭 القبلة</button>
-            <button class="tab" id="tab-cfg" onclick="setTab('cfg')">⚙️ الإعدادات</button>
-        </div>
-        <div id="list"></div>
-        <div id="qiblaContainer" style="display:none;">
-            <div class="compass-card">
-                <h3 style="margin:0 0 10px 0; color:var(--primary);">بوصلة القبلة - تعمل بدون إنترنت</h3>
-                <p style="font-size:12px; color:#888; margin:0;">الكعبة المشرفة: 21.4225°N, 39.8262°E</p>
-                <div class="compass-wrapper">
-                    <div class="compass-dial" id="compassDial">
-                        <div class="compass-north">ش</div>
-                        <div class="qibla-indicator" id="qiblaIndicator">🕋</div>
-                        <div class="compass-needle" id="compassNeedle"></div>
-                        <div class="compass-center"></div>
-                    </div>
-                </div>
-                <div class="compass-info">
-                    <div>اتجاهك: <span id="headingValue">--°</span></div>
-                    <div>القبلة: <span id="qiblaValue">--°</span></div>
-                    <div>المسافة للكعبة: <span id="distanceValue">-- كم</span></div>
-                    <div>حالة: <span id="qiblaDirection">--</span></div>
-                </div>
-                <button id="calibrateBtn" onclick="requestCompassPermission()">تفعيل البوصلة 🧭</button>
-                <div class="calibration-controls">
-                    <label>ضبط الدقة اليدوي: <span id="calibrationValue">0°</span> (اسحب إذا كان هناك انحراف)</label>
-                    <input type="range" id="calibrationSlider" min="-30" max="30" value="0" oninput="updateCalibration(this.value)">
-                </div>
-                <small id="compassStatus">اضغط تفعيل البوصلة وامنح الإذن. حرك الهاتف على شكل رقم 8 لمعايرة دقيقة.<br>تعمل بالحساس المغناطيسي بدون إنترنت.</small>
-            </div>
-            <div class="wisdom-box" style="margin-top:15px;">
-                <strong>طريقة الاستخدام:</strong><br>
-                1. اضغط تفعيل البوصلة وامنح الإذن<br>
-                2. احمل الهاتف بشكل مسطح<br>
-                3. استدر حتى يصبح السهم الأحمر متطابقاً مع علامة 🕋<br>
-                4. عند التطابق، أنت الآن باتجاه القبلة
-            </div>
-        </div>
-        <div style="height: 100px;"></div>
-    </main>
-    <button class="fab-add" id="fab" onclick="openAdd()">+</button>
-</div>
-<div class="modal-overlay" id="overlay">
-    <div class="modal-body">
-        <h3 id="mTitle">إضافة عمل</h3>
-        <input type="text" id="mName" placeholder="اسم العمل...">
-        <textarea id="mNote" placeholder="ملاحظات (اختياري)..." rows="3"></textarea>
-        <button class="save-btn" onclick="saveData()">حفظ البيانات</button>
-        <div id="deleteBtn" class="delete-text" onclick="deleteCurrent()" style="display:none;">حذف هذا العمل نهائياً</div>
-        <div class="delete-text" style="color:#aaa" onclick="closeModal()">إغلاق</div>
+<div class="app">
+  <div id="offlineIndicator" class="offline-badge"></div>
+
+  <header class="header">
+    <div class="header-top">
+      <div class="dates">
+        <div id="dateText" class="date-greg">--</div>
+        <div id="hijriDateDisplay" class="date-hijri">--</div>
+      </div>
+      <button class="btn-prayer" onclick="togglePrayerMenu()">🕌 الأوقات</button>
     </div>
+
+    <div id="prayerMenu" class="prayer-dropdown">
+      <div class="prayer-grid">
+        <div class="p-item"><span>الفجر</span><small>قبل الشروق بساعة</small><b id="t-fajr">--:--</b></div>
+        <div class="p-item"><span>الظهر</span><small>+10 دقائق</small><b id="t-dhuhr">--:--</b></div>
+        <div class="p-item"><span>العصر</span><small>+10 دقائق</small><b id="t-asr">--:--</b></div>
+        <div class="p-item"><span>المغرب</span><small>+10 دقائق</small><b id="t-maghrib">--:--</b></div>
+        <div class="p-item"><span>العشاء</span><small>+5 دقائق</small><b id="t-isha">--:--</b></div>
+      </div>
+      <div class="loc-bar">
+        <span id="locStatus">الموقع الافتراضي: النجف الأشرف</span>
+        <button onclick="requestLocation()" class="btn-loc">📍 تحديث موقعي</button>
+      </div>
+      <div class="notify-bar">
+        <button onclick="requestPrayerNotifications()" class="btn-notify">🔔 تفعيل الإشعارات</button>
+        <span id="notifyStatus" class="notify-state">غير مفعلة</span>
+      </div>
+    </div>
+
+    <div class="counter-wrap">
+      <div id="nextPrayerCounter" class="counter">جاري الحساب الفلكي للنجف الأشرف...</div>
+      <div class="progress-track"><div id="pBar" class="progress-fill"></div></div>
+    </div>
+  </header>
+
+  <nav class="tabs">
+    <button id="tab-sins" class="tab active" onclick="setTab('sins')"><span>⚠️</span> ذنوب</button>
+    <button id="tab-obeys" class="tab" onclick="setTab('obeys')"><span>✨</span> طاعات</button>
+    <button id="tab-qibla" class="tab" onclick="setTab('qibla')"><span>🕋</span> القبلة</button>
+    <button id="tab-cfg" class="tab" onclick="setTab('cfg')"><span>⚙️</span> إعدادات</button>
+  </nav>
+
+  <main id="list" class="content"></main>
+
+  <button id="fab" class="fab" onclick="openAdd()">+</button>
+
+  <div id="overlay" class="overlay">
+    <div class="modal">
+      <h3 id="mTitle">إضافة عمل</h3>
+      <input id="mName" type="text" placeholder="اسم العمل..." autocomplete="off">
+      <textarea id="mNote" placeholder="ملاحظات..." rows="3"></textarea>
+      <div class="modal-actions">
+        <button onclick="saveData()" class="btn-primary">حفظ</button>
+        <button id="deleteBtn" onclick="deleteCurrent()" class="btn-danger">حذف</button>
+        <button onclick="closeModal()" class="btn-ghost">إلغاء</button>
+      </div>
+    </div>
+  </div>
 </div>
-<script src="main.js" defer></script>
+
+<script src="main.js"></script>
 <script>
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./pwabuilder-sw.js')
-     .then(reg => console.log('SW registered - Offline ready'))
-     .catch(err => console.log('SW failed', err));
+if('serviceWorker' in navigator){
+  window.addEventListener('load', ()=>{
+    navigator.serviceWorker.register('./pwabuilder-sw.js').catch(e=>console.log('SW fail',e));
   });
 }
 </script>
