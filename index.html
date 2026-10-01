@@ -3,18 +3,17 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>ميزان - النجف الأشرف</title>
-<link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#0f0f0f">
+<title>ميزان المحاسبة - النجف الأشرف</title>
+<link rel="manifest" href="manifest.json?v=9">
+<meta name="theme-color" content="#5f27cd">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="style.css?v=9">
 </head>
 <body>
 <div class="app">
   <div id="offlineIndicator" class="offline-badge"></div>
-
+  
   <header class="header">
     <div class="header-top">
       <div class="dates">
@@ -23,7 +22,7 @@
       </div>
       <button class="btn-prayer" onclick="togglePrayerMenu()">🕌 الأوقات</button>
     </div>
-
+    
     <div id="prayerMenu" class="prayer-dropdown">
       <div class="prayer-grid">
         <div class="p-item"><span>الفجر</span><small>قبل الشروق بساعة</small><b id="t-fajr">--:--</b></div>
@@ -33,17 +32,17 @@
         <div class="p-item"><span>العشاء</span><small>+5 دقائق</small><b id="t-isha">--:--</b></div>
       </div>
       <div class="loc-bar">
-        <span id="locStatus">الموقع الافتراضي: النجف الأشرف</span>
-        <button onclick="requestLocation()" class="btn-loc">📍 تحديث موقعي</button>
+        <span id="locStatus">الافتراضي: النجف الأشرف</span>
+        <button onclick="doRequestLocation()" class="btn-loc">📍 تحديث موقعي</button>
       </div>
       <div class="notify-bar">
-        <button onclick="requestPrayerNotifications()" class="btn-notify">🔔 تفعيل الإشعارات</button>
+        <button onclick="doRequestNotify()" class="btn-notify">🔔 تفعيل الإشعارات</button>
         <span id="notifyStatus" class="notify-state">غير مفعلة</span>
       </div>
     </div>
 
     <div class="counter-wrap">
-      <div id="nextPrayerCounter" class="counter">جاري الحساب الفلكي للنجف الأشرف...</div>
+      <div id="nextPrayerCounter" class="counter">جاري الحساب الفلكي...</div>
       <div class="progress-track"><div id="pBar" class="progress-fill"></div></div>
     </div>
   </header>
@@ -73,11 +72,23 @@
   </div>
 </div>
 
-<script src="main.js"></script>
+<script src="main.js?v=9"></script>
 <script>
 if('serviceWorker' in navigator){
   window.addEventListener('load', ()=>{
-    navigator.serviceWorker.register('./pwabuilder-sw.js').catch(e=>console.log('SW fail',e));
+    navigator.serviceWorker.register('./pwabuilder-sw.js?v=9').then(reg=>{
+      if(reg.waiting){ reg.waiting.postMessage({type:'SKIP_WAITING'}); }
+    });
+    navigator.serviceWorker.addEventListener('controllerchange', ()=>{ window.location.reload(); });
+  });
+}
+if('caches' in window){
+  caches.keys().then(keys=>{
+    keys.forEach(k=>{
+      if(k.includes('mizan-v6') || k.includes('mizan-v8') || k.includes('mizan-v7')){
+        caches.delete(k);
+      }
+    });
   });
 }
 </script>
