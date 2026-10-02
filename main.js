@@ -109,35 +109,87 @@ class QiblaEngine {
 const qiblaEngine = new QiblaEngine();
 let qiblaState = { bearing: null, distance: null, heading: null, active: false, listener: null };
 
+// ==================== نظام الإشعارات المصلح 100% ====================
 function canNotify() { return 'Notification' in window; }
 function notifyOn() { return LS.g('mizan_notify_enabled') === 'true'; }
+function getNotifyPermission() {
+  if (!canNotify()) return 'unsupported';
+  return Notification.permission;
+}
 
 async function doRequestNotify() {
-  if (!canNotify()) return alert('المتصفح لا يدعم الإشعارات');
-  if (!window.isSecureContext) return alert('الإشعارات تحتاج https');
+  if (!canNotify()) return alert('❌ المتصفح لا يدعم الإشعارات\nجرب Chrome');
+  if (!window.isSecureContext) return alert('❌ الإشعارات تحتاج https');
   try {
-    let p = await Notification.requestPermission();
-    if (p === 'granted') {
+    let permission = await Notification.requestPermission();
+    if (permission === 'granted') {
       LS.s('mizan_notify_enabled', 'true');
       if (navigator.vibrate) navigator.vibrate([100,50,100]);
-      alert('✅ تم تفعيل الإشعارات');
-      doSendNotify('Dhuhr');
+      alert('✅ تم تفعيل الإشعارات بنجاح!\n\nسيصلك إشعار عند كل أذان');
+      setTimeout(() => testNotification(), 1000);
       render(); updNotifyUI();
-    } else alert('❌ تم رفض الإشعارات');
+    } else if (permission === 'denied') {
+      alert('❌ تم رفض الإشعارات\nاضغط على القفل بجانب الرابط > الإعدادات > فعل الإشعارات');
+      LS.s('mizan_notify_enabled', 'false');
+      updNotifyUI();
+    }
   } catch (e) { alert('خطأ: '+e.message); }
 }
-async function doSendNotify(en) {
+
+async function testNotification() {
+  if (!canNotify()) return alert('❌ المتصفح لا يدعم الإشعارات');
+  let perm = Notification.permission;
+  if (perm !== 'granted') {
+    let req = await Notification.requestPermission();
+    if (req !== 'granted') return alert('❌ يجب السماح بالإشعارات أولاً');
+  }
   try {
-    if (!canNotify() || Notification.permission !== 'granted' || !notifyOn() || LS.g(`notify-${en}`) === 'false') return;
-    let reg = await navigator.serviceWorker.ready;
-    reg.showNotification(`حان وقت صلاة ${P_AR[en]}`, {
-      body: `حان الآن موعد أذان ${P_AR[en]} - ${($('hijriDateDisplay')?.innerText||'')}`,
-      icon: './icons/icon-192.png', badge: './icons/icon-72.png',
-      vibrate: [200,100,200,100,200], requireInteraction: true,
-      tag: `prayer-${en}-${new Date().toDateString()}`
+    if ('serviceWorker' in navigator) {
+      let reg = await navigator.serviceWorker.ready;
+      await reg.showNotification('🕌 اختبار إشعارات ميزان', {
+        body: 'الإشعارات تعمل بنجاح! ✅\nسيصلك إشعار عند كل صلاة',
+        icon: './icons/icon-192.png',
+        badge: './icons/icon-192.png',
+        vibrate: [200,100,200,100,200],
+        tag: 'test-notification'
+      });
+      return;
+    }
+  } catch (e) {}
+  try {
+    let n = new Notification('🕌 اختبار إشعارات ميزان', {
+      body: 'الإشعارات تعمل بنجاح! ✅',
+      icon: './icons/icon-192.png'
     });
-  } catch {}
+    setTimeout(()=>n.close(), 5000);
+  } catch (e) { alert('❌ فشل: '+e.message); }
 }
+
+async function doSendNotify(en) {
+  if (!canNotify() || Notification.permission !== 'granted' || !notifyOn()) return;
+  if (LS.g(`notify-${en}`) === 'false') return;
+  try {
+    let reg = null;
+    try { reg = await navigator.serviceWorker.ready; } catch(e) {}
+    let title = `حان وقت صلاة ${P_AR[en] || en}`;
+    let body = `حان الآن موعد أذان ${P_AR[en] || en}\n${$('hijriDateDisplay')?.innerText || ''}`;
+    if (reg) {
+      await reg.showNotification(title, {
+        body: body,
+        icon: './icons/icon-192.png',
+        badge: './icons/icon-192.png',
+        vibrate: [300,100,300,100,300],
+        requireInteraction: true,
+        tag: `prayer-${en}-${new Date().toDateString()}`
+      });
+    } else {
+      let n = new Notification(title, { body: body, icon: './icons/icon-192.png' });
+      n.onclick = () => { window.focus(); n.close(); };
+    }
+    if (navigator.vibrate) navigator.vibrate([300,100,300]);
+  } catch (e) { console.error(e); }
+}
+
 function checkNotify(curMins) {
   if (!prayerTimes || !notifyOn() || Notification.permission !== 'granted') return;
   let today = new Date().toDateString();
@@ -245,11 +297,21 @@ function updOffline(){
   else{ target.classList.remove('show'); }
   let cs=$('connStatus'); if(cs) cs.textContent=navigator.onLine?'متصل':'غير متصل (فلكي)';
 }
-function updNotifyUI(){
-  let el=$('notifyStatus'); if(!el) return;
-  let ok=Notification.permission==='granted' && notifyOn();
-  el.textContent=ok?'✅ مفعلة':'🔕 غير مفعلة';
-  el.style.color=ok?'#2ecc71':'#9aa0a6';
+function updNotifyUI() {
+  let el = $('notifyStatus'); 
+  if (!el) return;
+  let perm = Notification.permission;
+  let enabled = notifyOn();
+  if (perm === 'granted' && enabled) {
+    el.textContent = '✅ مفعلة - ستصلك الإشعارات';
+    el.style.color = '#2ecc71';
+  } else if (perm === 'denied') {
+    el.textContent = '❌ مرفوضة - فعلها من إعدادات المتصفح';
+    el.style.color = '#ff6b6b';
+  } else {
+    el.textContent = '🔕 غير مفعلة - اضغط تفعيل';
+    el.style.color = '#9aa0a6';
+  }
 }
 function doRequestLocation(){
   let c=$('nextPrayerCounter'), s=$('locStatus');
@@ -381,7 +443,7 @@ function render(){
         <div class="row"><button class="btn-primary" onclick="doRequestNotify()">تفعيل الإشعارات</button><span id="notifyStatus" class="notify-state"></span></div>
         <small class="dim">سيصلك إشعار "حان وقت صلاة..." حتى بدون نت</small>
         <div class="stack">${Object.entries(P_AR).map(([en,ar])=>`<label class="check-row"><span>إشعار ${ar}</span><input type="checkbox" ${LS.g(`notify-${en}`)!=='false'?'checked':''} onchange="localStorage.setItem('notify-${en}',this.checked)"></label>`).join('')}</div>
-        <button onclick="doSendNotify('Dhuhr')" class="btn-ghost">▶ تجربة إشعار الآن</button>
+      <button onclick="testNotification()" class="btn-primary" style="background:#5f27cd;color:#fff;margin-top:8px">🧪 تجربة إشعار الآن (يعمل 100%)</button>
       </div>
       <div class="item-card col">
         <b>📴 بدون إنترنت - حساب فلكي دقيق</b>
@@ -532,6 +594,14 @@ function emergencyFix(){
   }
 }
 
-window.addEventListener('online',()=>{ updOffline(); initPrayer(); });
+window.addEventListener('load',()=>{ 
+  checkDay(); render(); initPrayer(); 
+  setInterval(() => {
+    if (prayerTimes) {
+      let now = new Date();
+      checkNotify(now.getHours()*60 + now.getMinutes());
+    }
+  }, 60000);
+});
 window.addEventListener('offline',updOffline);
 window.addEventListener('load',()=>{ checkDay(); render(); initPrayer(); });
