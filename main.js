@@ -594,6 +594,52 @@ function emergencyFix(){
   }
 }
 
+// === إصلاح الإشعارات فقط - ضع هذا في نهاية main.js ===
+function canNotify() { return 'Notification' in window; }
+function notifyOn() { return localStorage.getItem('mizan_notify_enabled') === 'true'; }
+
+async function doRequestNotify() {
+  if (!('Notification' in window)) { alert('❌ المتصفح لا يدعم الإشعارات'); return; }
+  let perm = await Notification.requestPermission();
+  if (perm === 'granted') {
+    localStorage.setItem('mizan_notify_enabled', 'true');
+    alert('✅ تم تفعيل الإشعارات');
+    testNotification();
+    if (typeof render === 'function') render();
+  } else {
+    alert('❌ تم رفض الإشعارات - فعلها من القفل بجانب الرابط');
+  }
+}
+
+async function testNotification() {
+  if (!('Notification' in window)) { alert('❌ لا يدعم الإشعارات'); return; }
+  let perm = Notification.permission;
+  if (perm!== 'granted') perm = await Notification.requestPermission();
+  if (perm!== 'granted') { alert('❌ يجب السماح أولاً'); return; }
+  try {
+    let n = new Notification('🕌 ميزان - اختبار', {
+      body: 'الإشعارات تعمل ✅\nسيصلك إشعار عند كل صلاة',
+      vibrate: [200,100,200]
+    });
+    n.onclick = function(){ window.focus(); n.close(); };
+  } catch(e) { alert('خطأ: ' + e.message); }
+}
+
+async function doSendNotify(en) {
+  if (!('Notification' in window)) return;
+  if (Notification.permission!== 'granted') return;
+  if (localStorage.getItem('mizan_notify_enabled')!== 'true') return;
+  if (localStorage.getItem('notify-' + en) === 'false') return;
+  try {
+    const names = {Fajr:'الفجر',Dhuhr:'الظهر',Asr:'العصر',Maghrib:'المغرب',Isha:'العشاء'};
+    let n = new Notification('حان وقت صلاة ' + (names[en]||en), {
+      body: 'حان الآن موعد الأذان',
+      vibrate: [300,100,300]
+    });
+    n.onclick = function(){ window.focus(); n.close(); };
+  } catch(e) {}
+}
+
 window.addEventListener('load',()=>{ 
   checkDay(); render(); initPrayer(); 
   setInterval(() => {
