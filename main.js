@@ -23,7 +23,7 @@ class AstroPrayer{
   sunAngleTime(angle,jd,isMorning=true){let s=this.sunPos(jd);let noon=this.midDay(jd);let cosH=(Math.sin(-angle*this.D2R)-Math.sin(this.lat*this.D2R)*Math.sin(s.decl*this.D2R))/(Math.cos(this.lat*this.D2R)*Math.cos(s.decl*this.D2R));if(cosH<-1||cosH>1)return null;let H=Math.acos(cosH)*this.R2D/15;return isMorning?noon-H:noon+H}
   asrTime(factor,jd){let s=this.sunPos(jd);let delta=Math.abs(this.lat-s.decl);let cot=factor+Math.tan(delta*this.D2R);let angle=Math.atan(1/cot)*this.R2D;return this.sunAngleTime(90-angle,jd,false)}
   toHM(f){if(f==null)return null;f=this.fixH(f);let h=Math.floor(f),m=Math.round((f-h)*60);if(m>=60){h++;m-=60}if(h>=24)h-=24;return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`}
-  calc(date=new Date()){let jd=this.julian(date);let sunriseF=this.sunAngleTime(0.833,jd,true);let sunsetF=this.sunAngleTime(0.833,jd,false);let dhuhrF=this.midDay(jd);let asrF=this.asrTime(1,jd);const addM=(f,m)=>f==null?null:f+m/60;return{Fajr:this.toHM(addM(sunriseF,-60)),Dhuhr:this.toHM(addM(dhuhrF,10)),Asr:this.toHM(addM(asrF,-60)),Maghrib:this.toHM(addM(sunsetF,10)),Isha:this.toHM(addM(sunsetF,50)),Sunrise:this.toHM(sunriseF)}}
+  calc(date=new Date()){let jd=this.julian(date);let sunriseF=this.sunAngleTime(0.833,jd,true);let sunsetF=this.sunAngleTime(0.833,jd,false);let dhuhrF=this.midDay(jd);let asrF=this.asrTime(1,jd);const addM=(f,m)=>f==null?null:f+m/60;return{Fajr:this.toHM(addM(sunriseF,-60)),Dhuhr:this.toHM(addM(dhuhrF,10)),Asr:this.toHM(addM(asrF,10)),Maghrib:this.toHM(addM(sunsetF,10)),Isha:this.toHM(addM(sunsetF+1.5,5)),Sunrise:this.toHM(sunriseF)}}
 }
 class QiblaEngine{
   constructor(){this.D2R=Math.PI/180;this.R2D=180/Math.PI}
@@ -112,7 +112,7 @@ function applyTimes(times){if(!times)return;prayerTimes=times;const map={fajr:'F
 function fetchTimes(lat,lng,isPrecise=false,forceOffline=false){
   if(forceOffline||!navigator.onLine){let astro=new AstroPrayer(lat,lng,3);let calc=astro.calc(new Date());LS.s('mizan_cached_timings',{timings:calc,lat,lng,isPrecise,date:new Date().toLocaleDateString(),ts:Date.now(),src:'astro'});applyTimes(calc);let ls=$('locStatus');if(ls)ls.innerText=isPrecise?'موقعك المحفوظ (فلكي بدون نت)':'النجف الأشرف (فلكي بدون نت)';return}
   let ts=Math.floor(Date.now()/1000);
-  fetch(`https://api.aladhan.com/v1/timings/${ts}?latitude=${lat}&longitude=${lng}&method=0`).then(r=>r.json()).then(d=>{if(!d||!d.data||!d.data.timings)throw 0;let raw=d.data.timings;let final={Fajr:addMins(raw.Sunrise,-60),Dhuhr:addMins(raw.Dhuhr,10),Asr:addMins(raw.Asr,-60),Maghrib:addMins(raw.Maghrib,10),Isha:addMins(raw.Maghrib,40),Sunrise:raw.Sunrise};LS.s('mizan_cached_timings',{timings:final,lat,lng,isPrecise,date:new Date().toLocaleDateString(),ts:Date.now(),src:'api'});applyTimes(final)}).catch(()=>{let astro=new AstroPrayer(lat,lng,3);applyTimes(astro.calc(new Date()))});
+  fetch(`https://api.aladhan.com/v1/timings/${ts}?latitude=${lat}&longitude=${lng}&method=0`).then(r=>r.json()).then(d=>{if(!d||!d.data||!d.data.timings)throw 0;let raw=d.data.timings;let final={Fajr:addMins(raw.Sunrise,-60),Dhuhr:addMins(raw.Dhuhr,10),Asr:addMins(raw.Asr,10),Maghrib:addMins(raw.Maghrib,10),Isha:addMins(raw.Isha,5),Sunrise:raw.Sunrise};LS.s('mizan_cached_timings',{timings:final,lat,lng,isPrecise,date:new Date().toLocaleDateString(),ts:Date.now(),src:'api'});applyTimes(final)}).catch(()=>{let astro=new AstroPrayer(lat,lng,3);applyTimes(astro.calc(new Date()))});
 }
 function initPrayer(){
   try{let hijri=new Intl.DateTimeFormat('ar-SA-u-ca-islamic-civil',{day:'numeric',month:'long',year:'numeric'}).format(Date.now());$('hijriDateDisplay').innerText=hijri}catch{$('hijriDateDisplay').innerText=new Date().toLocaleDateString('ar-IQ')}
@@ -214,7 +214,7 @@ function render(){
   if(activeTab==='qibla'){
     let pos=getPosForQibla();let bearing=qiblaEngine.bearing(pos.lat,pos.lng);let dist=qiblaEngine.distance(pos.lat,pos.lng);
     list.innerHTML=`
-      <div class="item-card-col">
+      <div class="item-cardcol">
         <div class="qibla-wrap">
           <div class="compass-box"><div id="compassRose" class="compass-rose"><div class="compass-marks">${Array.from({length:36}).map((_,i)=>`<span style="transform:translate(-50%,-50%) rotate(${i*10}deg)"></span>`).join('')}</div></div><div id="qiblaArrow" class="qibla-arrow"></div><div class="compass-center"></div></div>
           <div id="qiblaDiff" class="qibla-hint">ثبت الهاتف</div>
@@ -243,38 +243,58 @@ function saveData(){let n=$('mName').value.trim(),nt=$('mNote').value.trim();if(
 function deleteCurrent(){if(confirm('حذف؟')){db[activeTab].splice(editIdx,1);sync();closeModal();render()}}
 const closeModal=()=>$('overlay').style.display='none';
 const sync=()=>LS.s('mizan_pro_v5',db);
+
+// فقط دالة التصدير TXT - انسخها بدل القديمة
 const exportData=()=>{
   try{
-    let now=new Date();
-    let dateStr=now.toLocaleDateString('ar-EG',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
-    let txt='═══════════════════════════\n      ميزان المحاسبة\n═══════════════════════════\n\n';
-    txt+=`التاريخ: ${dateStr}\n\n`;
-    txt+='⚠️  الذنوب:\n';
-    db.sins.forEach((it,i)=>{txt+=`${i+1}. [${it.d?'✓':' '}] ${it.n}${it.nt?' - '+it.nt:''}\n`;});
-    txt+='\n✨ الطاعات:\n';
-    db.obeys.forEach((it,i)=>{txt+=`${i+1}. [${it.d?'✓':' '}] ${it.n}${it.nt?' - '+it.nt:''}\n`;});
-    let blob=new Blob([txt],{type:'text/plain;charset=utf-8'});
-    let a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='mizan_backup_'+new Date().toISOString().slice(0,10)+'.txt';a.click();
+    let now = new Date();
+    let dateStr = now.toLocaleDateString('ar-EG',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+    let txt = '';
+    txt += '═══════════════════════════\n';
+    txt += '      ميزان المحاسبة\n';
+    txt += '═══════════════════════════\n\n';
+    txt += `التاريخ: ${dateStr}\n\n`;
+    txt += '⚠️  الذنوب:\n';
+    db.sins.forEach((it,i)=>{
+      txt += `${i+1}. [${it.d?'✓':' '}] ${it.n}${it.nt?' - '+it.nt:''}\n`;
+    });
+    txt += '\n✨ الطاعات:\n';
+    db.obeys.forEach((it,i)=>{
+      txt += `${i+1}. [${it.d?'✓':' '}] ${it.n}${it.nt?' - '+it.nt:''}\n`;
+    });
+    let blob = new Blob([txt], {type:'text/plain;charset=utf-8'});
+    let url = URL.createObjectURL(blob);
+    let a=document.createElement('a');
+    a.href=url;
+    a.download='mizan_backup_'+new Date().toISOString().slice(0,10)+'.txt';
+    a.click();
+    setTimeout(()=>URL.revokeObjectURL(url),1000);
   }catch(e){alert('خطأ: '+e.message);}
 };
+
 async function fullReset(){
   if(!confirm('⚠️ تهيئة شاملة\n\nهل تريد تهيئة التطبيق بالكامل وكأنك تزور الموقع لأول مرة؟\n\nسيتم حذف:\n• كل الذنوب والطاعات\n• موقعك المحفوظ (يعود للنجف)\n• إعدادات الإشعارات\n• كل الكاش والملفات المؤقتة\n• إعدادات القبلة\n\nلا يمكن التراجع!')) return;
   if(!confirm('تأكيد نهائي - هل أنت متأكد من التهيئة الشاملة؟')) return;
   try{
+    // 1. مسح localStorage
     localStorage.clear();
+    // 2. مسح sessionStorage
     try{sessionStorage.clear();}catch(e){}
+    // 3. مسح كل الكاش
     if('caches' in window){
       try{
         let keys = await caches.keys();
         await Promise.all(keys.map(k=>caches.delete(k)));
-      }catch(e){}
+      }catch(e){console.log('cache clear error',e)}
     }
+    // 4. إلغاء تسجيل Service Workers
     if('serviceWorker' in navigator){
       try{
         let regs = await navigator.serviceWorker.getRegistrations();
         for(let r of regs) await r.unregister();
-      }catch(e){}
+      }catch(e){console.log('sw unregister error',e)}
     }
+    // 5. مسح IndexedDB
     try{
       if(window.indexedDB && indexedDB.databases){
         let dbs = await indexedDB.databases();
@@ -282,16 +302,21 @@ async function fullReset(){
       }
     }catch(e){}
     alert('✅ تمت التهيئة الشاملة بنجاح\nسيتم إعادة تحميل التطبيق كأول زيارة');
+    // إعادة تحميل قسري مع تجاهل الكاش
     location.reload(true);
     setTimeout(()=>{window.location.href='./?reset='+Date.now()},500);
   }catch(e){
+    console.error('reset error',e);
     localStorage.clear();
     alert('تم مسح البيانات - سيتم إعادة التحميل');
     location.reload(true);
   }
 }
+
+
+
+
+
 window.addEventListener('online',()=>{updOffline();initPrayer()});
 window.addEventListener('offline',updOffline);
 window.onload=()=>{checkDay();render();initPrayer()};
-">
-        
