@@ -23,7 +23,7 @@ class AstroPrayer{
   sunAngleTime(angle,jd,isMorning=true){let s=this.sunPos(jd);let noon=this.midDay(jd);let cosH=(Math.sin(-angle*this.D2R)-Math.sin(this.lat*this.D2R)*Math.sin(s.decl*this.D2R))/(Math.cos(this.lat*this.D2R)*Math.cos(s.decl*this.D2R));if(cosH<-1||cosH>1)return null;let H=Math.acos(cosH)*this.R2D/15;return isMorning?noon-H:noon+H}
   asrTime(factor,jd){let s=this.sunPos(jd);let delta=Math.abs(this.lat-s.decl);let cot=factor+Math.tan(delta*this.D2R);let angle=Math.atan(1/cot)*this.R2D;return this.sunAngleTime(90-angle,jd,false)}
   toHM(f){if(f==null)return null;f=this.fixH(f);let h=Math.floor(f),m=Math.round((f-h)*60);if(m>=60){h++;m-=60}if(h>=24)h-=24;return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`}
-  calc(date=new Date()){let jd=this.julian(date);let sunriseF=this.sunAngleTime(0.833,jd,true);let sunsetF=this.sunAngleTime(0.833,jd,false);let dhuhrF=this.midDay(jd);let asrF=this.asrTime(1,jd);const addM=(f,m)=>f==null?null:f+m/60;return{Fajr:this.toHM(addM(sunriseF,-60)),Dhuhr:this.toHM(addM(dhuhrF,10)),Asr:this.toHM(addM(asrF,-60)),Maghrib:this.toHM(addM(sunsetF,10)),Isha:this.toHM(addM(sunsetF,40)),Sunrise:this.toHM(sunriseF)}}
+  calc(date=new Date()){let jd=this.julian(date);let sunriseF=this.sunAngleTime(0.833,jd,true);let sunsetF=this.sunAngleTime(0.833,jd,false);let dhuhrF=this.midDay(jd);let asrF=this.asrTime(1,jd);const addM=(f,m)=>f==null?null:f+m/60;return{Fajr:this.toHM(addM(sunriseF,-60)),Dhuhr:this.toHM(addM(dhuhrF,10)),Asr:this.toHM(addM(asrF,-60)),Maghrib:this.toHM(addM(sunsetF,10)),Isha:this.toHM(addM(sunsetF,50)),Sunrise:this.toHM(sunriseF)}}
 }
 class QiblaEngine{
   constructor(){this.D2R=Math.PI/180;this.R2D=180/Math.PI}
@@ -48,31 +48,29 @@ async function doRequestNotify(){
       render(); updNotifyUI();
       setTimeout(()=>testNotification(),800);
     }else{
-      alert('❌ تم رفض الإشعارات - فعلها من إعدادات المتصفح (القفل بجانب الرابط)');
+      alert('❌ تم رفض الإشعارات - فعلها من إعدادات المتصفح');
     }
   }catch(e){alert('خطأ: '+e.message)}
 }
 
 async function testNotification(){
-  if(!canNotify()){alert('المتصفح لا يدعم الإشعارات');return}
+  if(!canNotify()){alert('المتصفح لا يدعم');return}
   let perm = Notification.permission;
   if(perm!=='granted'){
     perm = await Notification.requestPermission();
-    if(perm!=='granted'){alert('يجب السماح بالإشعارات أولاً');return}
+    if(perm!=='granted'){alert('يجب السماح بالإشعارات');return}
   }
   try{
     let reg = await navigator.serviceWorker.ready;
     await reg.showNotification('🕌 ميزان المحاسبة', {
-      body: 'الإشعارات تعمل بنجاح ✅ - سيصلك إشعار عند كل أذان',
+      body: 'الإشعارات تعمل بنجاح ✅',
       icon: './icons/icon-192.png',
       badge: './icons/icon-192.png',
       vibrate: [200,100,200],
-      tag: 'test-mizan',
-      requireInteraction: false
+      tag: 'test'
     });
   }catch(e){
-    alert('فشل الإشعار: '+e.message+'\nتأكد أنك فتحت الموقع بـ https وثبت التطبيق');
-    console.error(e);
+    alert('فشل الإشعار: '+e.message);
   }
 }
 
@@ -84,15 +82,13 @@ async function doSendNotify(en){
   try{
     let reg = await navigator.serviceWorker.ready;
     await reg.showNotification('حان وقت صلاة '+P_AR[en], {
-      body: 'حان الآن موعد أذان '+P_AR[en]+' - اضغط لفتح التطبيق',
+      body: 'حان الآن موعد الأذان',
       icon: './icons/icon-192.png',
       badge: './icons/icon-192.png',
       vibrate: [300,100,300],
-      requireInteraction: true,
-      tag: 'prayer-'+en+'-'+new Date().toDateString()
+      tag: 'prayer-'+en
     });
-    if(navigator.vibrate) navigator.vibrate([300,100,300]);
-  }catch(e){console.log('notify error',e)}
+  }catch(e){}
 }
 
 function checkNotify(curMins){
@@ -116,7 +112,7 @@ function applyTimes(times){if(!times)return;prayerTimes=times;const map={fajr:'F
 function fetchTimes(lat,lng,isPrecise=false,forceOffline=false){
   if(forceOffline||!navigator.onLine){let astro=new AstroPrayer(lat,lng,3);let calc=astro.calc(new Date());LS.s('mizan_cached_timings',{timings:calc,lat,lng,isPrecise,date:new Date().toLocaleDateString(),ts:Date.now(),src:'astro'});applyTimes(calc);let ls=$('locStatus');if(ls)ls.innerText=isPrecise?'موقعك المحفوظ (فلكي بدون نت)':'النجف الأشرف (فلكي بدون نت)';return}
   let ts=Math.floor(Date.now()/1000);
-  fetch(`https://api.aladhan.com/v1/timings/${ts}?latitude=${lat}&longitude=${lng}&method=0`).then(r=>r.json()).then(d=>{if(!d||!d.data||!d.data.timings)throw 0;let raw=d.data.timings;let final={Fajr:addMins(raw.Sunrise,-60),Dhuhr:addMins(raw.Dhuhr,10),Asr:addMins(raw.Asr,-60),Maghrib:addMins(raw.Maghrib,10),Isha:addMins(raw.Sunset,40),Sunrise:raw.Sunrise} // Asr غير دقيق -60, Isha +40;LS.s('mizan_cached_timings',{timings:final,lat,lng,isPrecise,date:new Date().toLocaleDateString(),ts:Date.now(),src:'api'});applyTimes(final)}).catch(()=>{let astro=new AstroPrayer(lat,lng,3);applyTimes(astro.calc(new Date()))});
+  fetch(`https://api.aladhan.com/v1/timings/${ts}?latitude=${lat}&longitude=${lng}&method=0`).then(r=>r.json()).then(d=>{if(!d||!d.data||!d.data.timings)throw 0;let raw=d.data.timings;let final={Fajr:addMins(raw.Sunrise,-60),Dhuhr:addMins(raw.Dhuhr,10),Asr:addMins(raw.Asr,-60),Maghrib:addMins(raw.Maghrib,10),Isha:addMins(raw.Maghrib,40),Sunrise:raw.Sunrise};LS.s('mizan_cached_timings',{timings:final,lat,lng,isPrecise,date:new Date().toLocaleDateString(),ts:Date.now(),src:'api'});applyTimes(final)}).catch(()=>{let astro=new AstroPrayer(lat,lng,3);applyTimes(astro.calc(new Date()))});
 }
 function initPrayer(){
   try{let hijri=new Intl.DateTimeFormat('ar-SA-u-ca-islamic-civil',{day:'numeric',month:'long',year:'numeric'}).format(Date.now());$('hijriDateDisplay').innerText=hijri}catch{$('hijriDateDisplay').innerText=new Date().toLocaleDateString('ar-IQ')}
@@ -226,115 +222,34 @@ const exportData=()=>{
     let now = new Date();
     let dateStr = now.toLocaleDateString('ar-EG',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
     let hijri = '';
-    try{hijri = new Intl.DateTimeFormat('ar-SA-u-ca-islamic-civil',{day:'numeric',month:'long',year:'numeric'}).format(Date.now());}catch(e){hijri=''}
+    try{hijri = new Intl.DateTimeFormat('ar-SA-u-ca-islamic-civil',{day:'numeric',month:'long',year:'numeric'}).format(Date.now());}catch(e){}
     let txt = '';
-    txt += '═══════════════════════════════════
+    txt += '═══════════════════════════
 ';
     txt += '      ميزان المحاسبة
 ';
-    txt += '      نسخة احتياطية منظمة
-';
-    txt += '═══════════════════════════════════
+    txt += '═══════════════════════════
 
 ';
-    txt += `التاريخ الميلادي: ${dateStr}
+    txt += `التاريخ: ${dateStr}
 `;
-    if(hijri) txt += `التاريخ الهجري: ${hijri}
-`;
-    txt += `وقت التصدير: ${now.toLocaleTimeString('ar-EG')}
-`;
-    txt += '
-───────────────────────────────────
-';
-    let loc = null; try{loc = JSON.parse(localStorage.getItem('mizan_last_loc'))}catch(e){}
-    if(loc) txt += `الموقع: ${loc.lat.toFixed(4)}, ${loc.lng.toFixed(4)}
-`;
-    else txt += 'الموقع: النجف الأشرف (افتراضي)
-';
-    try{
-      let cache = JSON.parse(localStorage.getItem('mizan_cached_timings'));
-      if(cache&&cache.date) txt += `آخر حساب أوقات: ${cache.date}
-`;
-    }catch(e){}
-    txt += '───────────────────────────────────
+    if(hijri) txt += `الهجري: ${hijri}
 
-';
-    
-    // الذنوب
-    txt += '⚠️  قائمة الذنوب والمعاصي
-';
-    txt += '───────────────────────────────────
-';
-    if(db.sins && db.sins.length){
-      db.sins.forEach((it,i)=>{
-        let status = it.d ? '[✓] تم تجنبه' : '[ ] لم يتم تجنبه';
-        txt += `${i+1}. ${status} - ${it.n}
 `;
-        if(it.nt) txt += `   ملاحظات: ${it.nt}
-`;
-      });
-    }else{
-      txt += 'لا توجد ذنوب مسجلة
+    txt += '⚠️  الذنوب:
 ';
-    }
+    db.sins.forEach((it,i)=>{txt += `${i+1}. [${it.d?'✓':' '}] ${it.n}${it.nt?' - '+it.nt:''}
+`;});
     txt += '
+✨ الطاعات:
 ';
-    
-    // الطاعات
-    txt += '✨  قائمة الطاعات والعبادات
-';
-    txt += '───────────────────────────────────
-';
-    if(db.obeys && db.obeys.length){
-      db.obeys.forEach((it,i)=>{
-        let status = it.d ? '[✓] تم فعله' : '[ ] لم يتم فعله';
-        txt += `${i+1}. ${status} - ${it.n}
-`;
-        if(it.nt) txt += `   ملاحظات: ${it.nt}
-`;
-      });
-    }else{
-      txt += 'لا توجد طاعات مسجلة
-';
-    }
-    txt += '
-';
-    
-    // الإحصائيات
-    let s=db.sins.filter(x=>x.d).length;
-    let o=db.obeys.filter(x=>x.d).length;
-    let totalS=db.sins.length, totalO=db.obeys.length;
-    txt += '📊  الإحصائيات
-';
-    txt += '───────────────────────────────────
-';
-    txt += `الذنوب المتجنبة: ${s} من ${totalS}
-`;
-    txt += `الطاعات المنجزة: ${o} من ${totalO}
-`;
-    let p=Math.max(5,Math.min(100,50+o*8-s*10));
-    txt += `نسبة الميزان: ${p}%
-`;
-    txt += '
-═══════════════════════════════════
-';
-    txt += 'تم إنشاء هذه القائمة من تطبيق ميزان المحاسبة
-';
-    txt += 'https://sjd003.github.io/time/
-';
-    txt += '═══════════════════════════════════
-';
-    
+    db.obeys.forEach((it,i)=>{txt += `${i+1}. [${it.d?'✓':' '}] ${it.n}${it.nt?' - '+it.nt:''}
+`;});
     let blob = new Blob([txt], {type:'text/plain;charset=utf-8'});
     let url = URL.createObjectURL(blob);
-    let a=document.createElement('a');
-    a.href=url;
-    a.download='mizan_backup_'+new Date().toISOString().slice(0,10)+'.txt';
-    a.click();
+    let a=document.createElement('a');a.href=url;a.download='mizan_backup_'+new Date().toISOString().slice(0,10)+'.txt';a.click();
     setTimeout(()=>URL.revokeObjectURL(url),1000);
-  }catch(e){
-    alert('خطأ في التصدير: '+e.message);
-  }
+  }catch(e){alert('خطأ: '+e.message);}
 };
 const fullReset=()=>{if(confirm('مسح كل شيء؟')){localStorage.clear();location.reload()}};
 
