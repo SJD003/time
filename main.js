@@ -244,7 +244,6 @@ function deleteCurrent(){if(confirm('حذف؟')){db[activeTab].splice(editIdx,1)
 const closeModal=()=>$('overlay').style.display='none';
 const sync=()=>LS.s('mizan_pro_v5',db);
 
-// فقط دالة التصدير TXT - انسخها بدل القديمة
 const exportData=()=>{
   try{
     let now = new Date();
@@ -262,7 +261,8 @@ const exportData=()=>{
     db.obeys.forEach((it,i)=>{
       txt += `${i+1}. [${it.d?'✓':' '}] ${it.n}${it.nt?' - '+it.nt:''}\n`;
     });
-    let blob = new Blob([txt], {type:'text/plain;charset=utf-8'});
+    // الحل هنا: إضافة BOM في بداية الملف
+    let blob = new Blob(["\uFEFF"+txt], {type:'text/plain;charset=utf-8'});
     let url = URL.createObjectURL(blob);
     let a=document.createElement('a');
     a.href=url;
@@ -312,11 +312,6 @@ async function fullReset(){
     location.reload(true);
   }
 }
-
-
-
-
-
 window.addEventListener('online',()=>{updOffline();initPrayer()});
 window.addEventListener('offline',updOffline);
 window.onload=()=>{checkDay();render();initPrayer()};
