@@ -4,6 +4,6 @@
   "maintenanceMessage": "🛠️ جاري إضافة ميزات جديدة.. يرجى الإنتظار قليلاً",
   "forceUpdate": false,
   "whatsNew": "✨ تمت إضافة ميزات جديدة",
-  "showWhatsNew": true,
+  "showWhatsNew": false,
   "minVersion": "0.10"
 }
