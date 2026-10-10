@@ -1,4 +1,4 @@
-// ميزان V20 - نافلة الليل = الفجر الجعفري الأصلي
+// ميزان V16 - اصلاح القبلة فقط - الباقي V14 نفسه
 const $ = id=>document.getElementById(id);
 const LS = {
   j:k=>{try{return JSON.parse(localStorage.getItem(k))}catch{return null}},
@@ -7,7 +7,7 @@ const LS = {
 };
 const NAJAF = {lat:32.0273,lng:44.3393};
 const KAABA = {lat:21.422507,lng:39.826209};
-const P_AR = {Fajr:'الفجر',Dhuhr:'الظهر',Asr:'العصر',Maghrib:'المغرب',Isha:'العشاء',Layl:'صلاة الليل'};
+const P_AR = {Fajr:'الفجر',Dhuhr:'الظهر',Asr:'العصر',Maghrib:'المغرب',Isha:'العشاء'};
 
 let db = LS.j('mizan_pro_v5') || {sins:[{n:"الغيبة",d:false,nt:""}],obeys:[{n:"الصلوات الخمس",d:false,nt:""}],lastUpdate:new Date().toLocaleDateString()};
 let activeTab='sins', editIdx=null, prayerTimes=null;
@@ -20,27 +20,27 @@ class AstroPrayer{
   sunPos(jd){ let D=jd-2451545.0; let g=this.fixA(357.529+0.98560028*D); let q=this.fixA(280.459+0.98564736*D); let L=this.fixA(q+1.915*Math.sin(g*this.D2R)+0.020*Math.sin(2*g*this.D2R)); let e=23.439-0.00000036*D; let RA=this.fixA(Math.atan2(Math.cos(e*this.D2R)*Math.sin(L*this.D2R),Math.cos(L*this.D2R))*this.R2D); let decl=Math.asin(Math.sin(e*this.D2R)*Math.sin(L*this.D2R))*this.R2D; let eqt=q/15-this.fixA(RA)/15; return {decl,eqt}; }
   midDay(jd){ let s=this.sunPos(jd); return this.fixH(12+this.tz-this.lng/15-s.eqt); }
   sunAngleTime(angle,jd,isMorning){ let s=this.sunPos(jd); let noon=this.midDay(jd); let cosH=(Math.sin(-angle*this.D2R)-Math.sin(this.lat*this.D2R)*Math.sin(s.decl*this.D2R))/(Math.cos(this.lat*this.D2R)*Math.cos(s.decl*this.D2R)); if(cosH<-1||cosH>1) return null; let H=Math.acos(cosH)*this.R2D/15; return isMorning?noon-H:noon+H; }
+  asrTime(factor,jd){ let s=this.sunPos(jd); let delta=Math.abs(this.lat-s.decl); let cot=factor+Math.tan(delta*this.D2R); let angle=Math.atan(1/cot)*this.R2D; return this.sunAngleTime(90-angle,jd,false); }
   toHM(f){ if(f==null) return null; f=this.fixH(f); let h=Math.floor(f); let m=Math.round((f-h)*60); if(m>=60){h++;m-=60} if(h>=24)h-=24; if(h<0)h+=24; return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`; }
   toMins(t){ if(!t) return null; let [h,m]=t.split(':').map(Number); return h*60+m; }
   addMinsHM(t,mins){ let total=this.toMins(t); if(total==null) return null; total+=mins; total=(total%1440+1440)%1440; let h=Math.floor(total/60), m=total%60; return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`; }
-  calc(date=new Date()){
+  calcBase(date=new Date()){ let jd=this.julian(date); let sunrise=this.sunAngleTime(this.angles.Sunrise,jd,true); let dhuhr=this.midDay(jd); let maghribBase=this.sunAngleTime(this.angles.Maghrib,jd,false); return {Sunrise:this.toHM(sunrise),_raw:{sunrise,dhuhr,maghribBase}}; }
+    calc(date=new Date()){
     let jd=this.julian(date);
-    let sunriseRaw=this.sunAngleTime(this.angles.Sunrise,jd,true);
-    let fajrJaafariRaw=this.sunAngleTime(this.angles.Fajr,jd,true); // الفجر الجعفري الأصلي
-    let dhuhrRaw=this.midDay(jd);
-    let maghribBaseRaw=this.sunAngleTime(this.angles.Maghrib,jd,false);
+    let sunrise = this.sunAngleTime(this.angles.Sunrise,jd,true);
+    let fajrJaafari = this.sunAngleTime(this.angles.Fajr,jd,true); // هذا الفجر الجعفري الأصلي 16 درجة
+    let dhuhr = this.midDay(jd);
+    let maghribBase = this.sunAngleTime(this.angles.Maghrib,jd,false);
     return {
-      Fajr: this.toHM(sunriseRaw!=null? sunriseRaw - 1 : null), // توقيتك: قبل الشروق بساعة
-      Dhuhr: this.toHM(dhuhrRaw!=null? dhuhrRaw + 10/60 : null),
-      Asr: this.toHM(dhuhrRaw!=null? dhuhrRaw + 1 : null),
-      Maghrib: this.toHM(maghribBaseRaw!=null? maghribBaseRaw + 5/60 : null),
-      Isha: this.toHM(maghribBaseRaw!=null? maghribBaseRaw + 30/60 : null),
-      Layl: this.toHM(fajrJaafariRaw), // نافلة الليل = الفجر الجعفري
-      Sunrise: this.toHM(sunriseRaw)
+      Fajr: this.toHM(sunrise!=null ? sunrise - 1 : null), // فجرك الخاص: قبل الشروق بساعة
+      Dhuhr: this.toHM(dhuhr!=null ? dhuhr + 10/60 : null),
+      Asr: this.toHM(dhuhr!=null ? dhuhr + 1 : null),
+      Maghrib: this.toHM(maghribBase!=null ? maghribBase + 5/60 : null),
+      Isha: this.toHM(maghribBase!=null ? maghribBase + 30/60 : null),
+      Layl: this.toHM(fajrJaafari), // نافلة الليل = الفجر الجعفري الأصلي
+      Sunrise: this.toHM(sunrise)
     };
   }
-}
-
 class QiblaEngine{
   constructor(){this.D2R=Math.PI/180;this.R2D=180/Math.PI}
   bearing(lat,lng){ let φ1=lat*this.D2R, λ1=lng*this.D2R, φ2=KAABA.lat*this.D2R, λ2=KAABA.lng*this.D2R; let Δλ=λ2-λ1; let y=Math.sin(Δλ)*Math.cos(φ2); let x=Math.cos(φ1)*Math.sin(φ2)-Math.sin(φ1)*Math.cos(φ2)*Math.cos(Δλ); return (Math.atan2(y,x)*this.R2D+360)%360; }
@@ -81,7 +81,7 @@ function checkNotify(curMins){
   let today=new Date().toDateString();
   if(LS.g('mizan_notify_date')!==today){notifiedCache={};LS.s('mizan_notify_date',today);LS.s('mizan_notified_today',{});}
   for(let [en,t] of Object.entries(prayerTimes)){
-    if(!t||en==='Sunrise'||en==='Layl'||en.startsWith('_'))continue;
+    if(!t||en==='Sunrise'||en.startsWith('_'))continue;
     let [h,m]=t.split(':').map(Number); if(isNaN(h))continue;
     if(curMins===h*60+m){ let k=today+'_'+en; if(!notifiedCache[k]){doSendNotify(en);notifiedCache[k]=1;LS.s('mizan_notified_today',notifiedCache);} }
   }
@@ -89,7 +89,7 @@ function checkNotify(curMins){
 function to12(t){if(!t||!t.includes(':'))return '--:--';let [h,m]=t.split(':').map(Number);let suf=h>=12?'م':'ص';h=h%12||12;return `${h}:${String(m).padStart(2,'0')} ${suf}`}
 function applyTimes(times){
   if(!times) return; prayerTimes=times;
-  const map={fajr:'Fajr',dhuhr:'Dhuhr',asr:'Asr',maghrib:'Maghrib',isha:'Isha',layl:'Layl'};
+  const map={fajr:'Fajr',dhuhr:'Dhuhr',asr:'Asr',maghrib:'Maghrib',isha:'Isha'};
   Object.entries(map).forEach(([k,en])=>{ let el=$(`t-${k}`); if(el&&times[en]) el.innerText=to12(times[en]) });
   if(window.prayerInt) clearInterval(window.prayerInt);
   window.prayerInt=setInterval(tick,1000); tick();
@@ -97,7 +97,7 @@ function applyTimes(times){
 function fetchTimes(lat,lng,isPrecise=false){
   let astro=new AstroPrayer(lat,lng,3);
   let calc=astro.calc(new Date());
-  LS.s('mizan_cached_timings',{timings:calc,lat,lng,isPrecise,date:new Date().toLocaleDateString(),ts:Date.now(),src:'astro-jaafari-v20'});
+  LS.s('mizan_cached_timings',{timings:calc,lat,lng,isPrecise,date:new Date().toLocaleDateString(),ts:Date.now(),src:'astro-jaafari-v14'});
   applyTimes(calc);
   let ls=$('locStatus'); if(ls) ls.innerText=isPrecise?`موقعك المحفوظ (${lat.toFixed(3)}, ${lng.toFixed(3)})`:'النجف الأشرف (جعفري دقيق بدون نت)';
   if(navigator.onLine){
@@ -105,16 +105,16 @@ function fetchTimes(lat,lng,isPrecise=false){
     fetch(`https://api.aladhan.com/v1/timings/${ts}?latitude=${lat}&longitude=${lng}&method=0`,{signal:AbortSignal.timeout(4000)}).then(r=>r.json()).then(d=>{
       if(!d?.data?.timings) return;
       let raw=d.data.timings;
-      let final={
-        Fajr:astro.addMinsHM(raw.Sunrise,-60),
-        Dhuhr:astro.addMinsHM(raw.Dhuhr,10),
-        Asr:astro.addMinsHM(raw.Dhuhr,60),
-        Maghrib:astro.addMinsHM(raw.Maghrib,5),
-        Isha:astro.addMinsHM(raw.Maghrib,30),
-        Layl:raw.Fajr, // الفجر الجعفري من الـ API
-        Sunrise:raw.Sunrise
-      };
-      LS.s('mizan_cached_timings',{timings:final,lat,lng,isPrecise,date:new Date().toLocaleDateString(),ts:Date.now(),src:'api-enhanced-v20'});
+      let final={ 
+  Fajr:astro.addMinsHM(raw.Sunrise,-60), 
+  Dhuhr:astro.addMinsHM(raw.Dhuhr,10), 
+  Asr:astro.addMinsHM(raw.Dhuhr,60), 
+  Maghrib:astro.addMinsHM(raw.Maghrib,5), 
+  Isha:astro.addMinsHM(raw.Maghrib,30), 
+  Layl:raw.Fajr, // مهم: هذا هو الفجر الجعفري من الـ API نفسه يصير وقت نافلة الليل
+  Sunrise:raw.Sunrise 
+};
+      LS.s('mizan_cached_timings',{timings:final,lat,lng,isPrecise,date:new Date().toLocaleDateString(),ts:Date.now(),src:'api-enhanced'});
       applyTimes(final);
     }).catch(()=>{});
   }
@@ -124,7 +124,6 @@ function initPrayer(){
   updOffline();
   let loc=LS.j('mizan_last_loc');
   let cache=LS.j('mizan_cached_timings');
-  if(cache?.timings &&!cache.timings.Layl){ localStorage.removeItem('mizan_cached_timings'); cache=null; }
   if(!navigator.onLine && cache?.timings){ applyTimes(cache.timings); return; }
   if(loc&&typeof loc.lat==='number'){ fetchTimes(loc.lat,loc.lng,true); } else { fetchTimes(NAJAF.lat,NAJAF.lng,false); }
   updNotifyUI();
@@ -157,7 +156,7 @@ function setTab(t){ try{ if(activeTab==='qibla'&&t!=='qibla') stopQiblaCompass()
 function render(){
   let list=$('list');if(!list)return;list.innerHTML='';
   if(activeTab==='cfg'){
-    list.innerHTML=`<div class="item-card col"><b>🔔 إشعارات الصلاة</b><div class="row"><button onclick="doRequestNotify()" class="btn-save">تفعيل الإشعارات</button><span class="notify-status" id="notifyStatus2"></span></div><div class="stack">${Object.entries(P_AR).filter(([k])=>k!=='Layl').map(([en,ar])=>`<label class="check-row"><span>${ar}</span><input type="checkbox" ${LS.g(`notify-${en}`)!=='false'?'checked':''} onchange="localStorage.setItem('notify-${en}',this.checked)"></label>`).join('')}</div><button onclick="testNotification()" class="btn-save" style="margin-top:10px;width:100%">🧪 تجربة إشعار الآن</button></div><div class="item-card col"><b>📴 بدون إنترنت</b><small class="dim">يعمل بدون نت بحساب جعفري</small><div class="row"><button class="btn-cancel" onclick="localStorage.removeItem('mizan_last_loc');localStorage.removeItem('mizan_cached_timings');alert('تم الرجوع للنجف');location.reload()">🔄 العودة للنجف</button></div></div><div class="item-card" onclick="exportData()"><b>📥 تصدير نسخة</b></div><div class="item-card" onclick="fullReset()" style="color:var(--sin)"><b>🔄 تهيئة شاملة</b></div><p class="ver">ميزان V20 - نافلة الليل</p>`;
+    list.innerHTML=`<div class="item-card col"><b>🔔 إشعارات الصلاة</b><div class="row"><button onclick="doRequestNotify()" class="btn-save">تفعيل الإشعارات</button><span class="notify-status" id="notifyStatus2"></span></div><div class="stack">${Object.entries(P_AR).map(([en,ar])=>`<label class="check-row"><span>${ar}</span><input type="checkbox" ${LS.g(`notify-${en}`)!=='false'?'checked':''} onchange="localStorage.setItem('notify-${en}',this.checked)"></label>`).join('')}</div><button onclick="testNotification()" class="btn-save" style="margin-top:10px;width:100%">🧪 تجربة إشعار الآن</button></div><div class="item-card col"><b>📴 بدون إنترنت</b><small class="dim">يعمل بدون نت بحساب جعفري</small><div class="row"><button class="btn-cancel" onclick="localStorage.removeItem('mizan_last_loc');alert('تم الرجوع للنجف');location.reload()">🔄 العودة للنجف</button></div></div><div class="item-card" onclick="exportData()"><b>📥 تصدير نسخة</b></div><div class="item-card" onclick="fullReset()" style="color:var(--sin)"><b>🔄 تهيئة شاملة</b></div><p class="ver">ميزان V16 - قبلة مصلحة</p>`;
     setTimeout(()=>{updNotifyUI();updOffline();},100);return;
   }
   if(activeTab==='qibla'){

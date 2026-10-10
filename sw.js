@@ -1,4 +1,4 @@
-const CACHE='mizan-v14-offline-full';
+const CACHE='mizan-v15-icon-compass-fixed';
 const ASSETS=[
   './',
   './index.html',

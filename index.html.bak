@@ -72,10 +72,6 @@
   </div>
 </div>
 
-<script src="./app-config.json" type="application/json"></script>
-<script src="./control.js"></script>
-<script src="./main.js"></script>
-
 <script src="main.js"></script>
 <script>
 // تسجيل Service Worker الصحيح بدون اصدارات
