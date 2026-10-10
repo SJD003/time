@@ -2,7 +2,7 @@
   "version": "3",
   "maintenance": false,
   "maintenanceMessage": "🛠️ جاري إضافة ميزات جديدة.. يرجى الإنتظار قليلاً",
-  "forceUpdate": true,
+  "forceUpdate": false,
   "whatsNew": "✨ تمت إضافة ميزات جديدة",
   "showWhatsNew": true,
   "minVersion": "19"
