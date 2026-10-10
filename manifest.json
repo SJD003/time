@@ -1,0 +1,17 @@
+{
+  "name": "ميزان المحاسبة",
+  "short_name": "الميزان",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#0f0f0f",
+  "theme_color": "#5f27cd",
+  "id": "mizan-v14",
+  "description": "ميزان المحاسبة - يعمل بدون انترنت 100% - حساب جعفري دقيق",
+  "icons": [
+    {"src": "icons/icon-192.png","sizes": "192x192","type": "image/png","purpose": "any"},
+    {"src": "icons/icon-192-maskable.png","sizes": "192x192","type": "image/png","purpose": "maskable"},
+    {"src": "icons/icon-512.png","sizes": "512x512","type": "image/png","purpose": "any"},
+    {"src": "icons/icon-512-maskable.png","sizes": "512x512","type": "image/png","purpose": "maskable"}
+  ]
+}

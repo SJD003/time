@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>ميزان المحاسبة - النجف الأشرف</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#5f27cd">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="app">
+  <div id="offlineIndicator" class="offline-badge">📴 وضع بدون انترنت - حساب فلكي دقيق</div>
+
+  <header class="header">
+    <div class="header-top">
+      <div class="dates">
+        <div id="dateText" class="date-greg">--</div>
+        <div id="hijriDateDisplay" class="date-hijri">--</div>
+      </div>
+      <button class="btn-prayer" onclick="togglePrayerMenu()">🕌 الأوقات</button>
+    </div>
+
+    <div id="prayerMenu" class="prayer-dropdown">
+      <div class="prayer-grid">
+        <div class="p-item"><span>الفجر</span><small>قبل الشروق بساعة</small><b id="t-fajr">--:--</b></div>
+        <div class="p-item"><span>الظهر</span><small>+10 دقائق</small><b id="t-dhuhr">--:--</b></div>
+        <div class="p-item"><span>العصر</span><small>بعد الظهر بساعة</small><b id="t-asr">--:--</b></div>
+        <div class="p-item"><span>المغرب</span><small>+5 دقائق</small><b id="t-maghrib">--:--</b></div>
+        <div class="p-item"><span>العشاء</span><small>بعد المغرب 30 دقيقة</small><b id="t-isha">--:--</b></div>
+      </div>
+      <div class="loc-bar">
+        <span id="locStatus">الافتراضي: النجف الأشرف</span>
+        <button onclick="doRequestLocation()" class="btn-loc">📍 تحديث موقعي</button>
+      </div>
+      <div class="notify-bar">
+        <button onclick="doRequestNotify()" class="btn-notify">🔔 تفعيل الإشعارات</button>
+        <span id="notifyStatus" class="notify-state">غير مفعلة</span>
+      </div>
+    </div>
+
+    <div class="counter-wrap">
+      <div id="nextPrayerCounter" class="counter">جاري الحساب الفلكي...</div>
+      <div class="progress-track"><div id="pBar" class="progress-fill"></div></div>
+    </div>
+  </header>
+
+  <nav class="tabs">
+    <button id="tab-sins" class="tab active" onclick="setTab('sins')"><span>⚠️</span> ذنوب</button>
+    <button id="tab-obeys" class="tab" onclick="setTab('obeys')"><span>✨</span> طاعات</button>
+    <button id="tab-qibla" class="tab" onclick="setTab('qibla')"><span>🕋</span> القبلة</button>
+    <button id="tab-cfg" class="tab" onclick="setTab('cfg')"><span>⚙️</span> إعدادات</button>
+  </nav>
+
+  <main id="list" class="content"></main>
+  <button id="fab" class="fab" onclick="openAdd()">+</button>
+
+  <div id="overlay" class="overlay" onclick="if(event.target==this)closeModal()">
+    <div class="modal">
+      <h3 id="mTitle">إضافة عمل</h3>
+      <input id="mName" type="text" placeholder="اسم العمل..." autocomplete="off">
+      <textarea id="mNote" placeholder="ملاحظات..." rows="3"></textarea>
+      <div class="modal-actions">
+        <button onclick="saveData()" class="btn-primary">حفظ</button>
+        <button id="deleteBtn" onclick="deleteCurrent()" class="btn-danger">حذف</button>
+        <button onclick="closeModal()" class="btn-ghost">إلغاء</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="main.js"></script>
+<script>
+// تسجيل Service Worker الصحيح بدون اصدارات
+if('serviceWorker' in navigator){
+  window.addEventListener('load', ()=>{
+    navigator.serviceWorker.register('./sw.js').then(reg=>{
+      console.log('SW V14 registered');
+      if(reg.waiting){ reg.waiting.postMessage({type:'SKIP_WAITING'}); }
+      reg.addEventListener('updatefound', ()=>{
+        const nw = reg.installing;
+        nw.addEventListener('statechange', ()=>{
+          if(nw.state==='installed' && navigator.serviceWorker.controller){
+            nw.postMessage({type:'SKIP_WAITING'});
+          }
+        });
+      });
+    });
+    navigator.serviceWorker.addEventListener('controllerchange', ()=>{ window.location.reload(); });
+  });
+}
+</script>
+</body>
+</html>
