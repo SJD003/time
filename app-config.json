@@ -1,6 +1,6 @@
 {
-  "version": "21",
-  "maintenance": true,
+  "version": "3",
+  "maintenance": false,
   "maintenanceMessage": "🛠️ جاري إضافة ميزات جديدة.. يرجى الإنتظار قليلاً",
   "forceUpdate": false,
   "whatsNew": "✨ تمت إضافة ميزات جديدة",
