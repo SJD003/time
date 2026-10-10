@@ -1,9 +1,9 @@
 {
   "version": "21",
-  "maintenance": false,
-  "maintenanceMessage": "🛠️ جاري إضافة ميزات جديدة لصلاة الليل.. يرجع بعد دقائق",
+  "maintenance": true,
+  "maintenanceMessage": "🛠️ جاري إضافة ميزات جديدة.. يرجى الإنتظار قليلاً",
   "forceUpdate": false,
-  "whatsNew": "✨ تمت إضافة صلاة الليل بتوقيت الفجر الجعفري",
+  "whatsNew": "✨ تمت إضافة ميزات جديدة",
   "showWhatsNew": true,
   "minVersion": "19"
 }
