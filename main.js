@@ -99,7 +99,7 @@ function fetchTimes(lat,lng,isPrecise=false){
   let calc=astro.calc(new Date());
   LS.s('mizan_cached_timings',{timings:calc,lat,lng,isPrecise,date:new Date().toLocaleDateString(),ts:Date.now(),src:'astro-jaafari-v20'});
   applyTimes(calc);
-  let ls=$('locStatus'); if(ls) ls.innerText=isPrecise?`موقعك المحفوظ (${lat.toFixed(3)}, ${lng.toFixed(3)})`:'النجف الأشرف (جعفري دقيق بدون نت)';
+  let ls=$('locStatus'); if(ls) ls.innerText=isPrecise?`موقعك المحفوظ (${lat.toFixed(3)}, ${lng.toFixed(3)})`:'(دقيق بدون نت)';
   if(navigator.onLine){
     let ts=Math.floor(Date.now()/1000);
     fetch(`https://api.aladhan.com/v1/timings/${ts}?latitude=${lat}&longitude=${lng}&method=0`,{signal:AbortSignal.timeout(4000)}).then(r=>r.json()).then(d=>{
@@ -157,7 +157,7 @@ function setTab(t){ try{ if(activeTab==='qibla'&&t!=='qibla') stopQiblaCompass()
 function render(){
   let list=$('list');if(!list)return;list.innerHTML='';
   if(activeTab==='cfg'){
-    list.innerHTML=`<div class="item-card col"><b>🔔 إشعارات الصلاة</b><div class="row"><button onclick="doRequestNotify()" class="btn-save">تفعيل الإشعارات</button><span class="notify-status" id="notifyStatus2"></span></div><div class="stack">${Object.entries(P_AR).filter(([k])=>k!=='Layl').map(([en,ar])=>`<label class="check-row"><span>${ar}</span><input type="checkbox" ${LS.g(`notify-${en}`)!=='false'?'checked':''} onchange="localStorage.setItem('notify-${en}',this.checked)"></label>`).join('')}</div><button onclick="testNotification()" class="btn-save" style="margin-top:10px;width:100%">🧪 تجربة إشعار الآن</button></div><div class="item-card col"><b>📴 بدون إنترنت</b><small class="dim">يعمل بدون نت بحساب جعفري</small><div class="row"><button class="btn-cancel" onclick="localStorage.removeItem('mizan_last_loc');localStorage.removeItem('mizan_cached_timings');alert('تم الرجوع للنجف');location.reload()">🔄 العودة للنجف</button></div></div><div class="item-card" onclick="exportData()"><b>📥 تصدير نسخة</b></div><div class="item-card" onclick="fullReset()" style="color:var(--sin)"><b>🔄 تهيئة شاملة</b></div><p class="ver">ميزان V20 - نافلة الليل</p>`;
+    list.innerHTML=`<div class="item-card col"><b>🔔 إشعارات الصلاة</b><div class="row"><button onclick="doRequestNotify()" class="btn-save">تفعيل الإشعارات</button><span class="notify-status" id="notifyStatus2"></span></div><div class="stack">${Object.entries(P_AR).filter(([k])=>k!=='Layl').map(([en,ar])=>`<label class="check-row"><span>${ar}</span><input type="checkbox" ${LS.g(`notify-${en}`)!=='false'?'checked':''} onchange="localStorage.setItem('notify-${en}',this.checked)"></label>`).join('')}</div><button onclick="testNotification()" class="btn-save" style="margin-top:10px;width:100%">🧪 تجربة إشعار الآن</button></div><div class="item-card col"><b>📴 بدون إنترنت</b><small class="dim">يعمل بدون نت</small><div class="row"><button class="btn-cancel" onclick="localStorage.removeItem('mizan_last_loc');localStorage.removeItem('mizan_cached_timings');alert('تم الرجوع للنجف');location.reload()">🔄 العودة للنجف</button></div></div><div class="item-card" onclick="exportData()"><b>📥 تصدير نسخة</b></div><div class="item-card" onclick="fullReset()" style="color:var(--sin)"><b>🔄 تهيئة شاملة</b></div><p class="ver">ميزان V20 -</p>`;
     setTimeout(()=>{updNotifyUI();updOffline();},100);return;
   }
   if(activeTab==='qibla'){
