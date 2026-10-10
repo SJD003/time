@@ -5,5 +5,5 @@
   "forceUpdate": false,
   "whatsNew": "✨ تمت إضافة ميزات جديدة",
   "showWhatsNew": true,
-  "minVersion": "19"
+  "minVersion": "0.10"
 }
