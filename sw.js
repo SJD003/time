@@ -1,6 +1,6 @@
 // sw.js - ميزان V21 - إشعارات خلفية تعمل حتى بعد إغلاق التطبيق
 // صلاة الليل = قبل الشروق بـ 220 دقيقة
-const CACHE = 'mizan-v21-3.22';
+const CACHE = 'mizan-v21-3.23';
 const ASSETS = [
   './',
   './index.html',
@@ -15,7 +15,7 @@ const ASSETS = [
 
 let scheduledTimers = [];
 let currentData = null;
-const P_AR = {Fajr:'الفجر',Dhuhr:'الظهر',Asr:'العصر',Maghrib:'المغرب',Isha:'العشاء',Layl:'صلاة الليل'};
+const P_AR = {Fajr:'الفجر',Dhuhr:'الظهر',Maghrib:'المغرب',Layl:'صلاة الليل'};
 
 function clearSchedules(){
   scheduledTimers.forEach(id=>clearTimeout(id));
@@ -76,6 +76,7 @@ function scheduleAllPrayers(payload){
 
   Object.entries(timings).forEach(([en,timeStr])=>{
     if(en==='Sunrise' || en.startsWith('_')) return;
+    if(en==='Asr' || en==='Isha') return; // حماية: تجاهل أي بيانات قديمة للعصر/العشاء
     if(prefs[en]===false) return; // المستخدم طافي هذا الإشعار
     let p=parseHM(timeStr);
     if(!p) return;
