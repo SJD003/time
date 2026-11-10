@@ -7,14 +7,14 @@ const LS = {
 };
 const NAJAF = {lat:32.0273,lng:44.3393};
 const KAABA = {lat:21.422507,lng:39.826209};
-const P_AR = {Fajr:'الفجر',Dhuhr:'الظهر',Asr:'العصر',Maghrib:'المغرب',Isha:'العشاء',Layl:'صلاة الليل'};
+const P_AR = {Fajr:'الفجر',Dhuhr:'الظهر',Maghrib:'المغرب',Layl:'صلاة الليل'};
 
 let db = LS.j('mizan_pro_v5') || {sins:[{n:"الغيبة",d:false,nt:""}],obeys:[{n:"الصلوات الخمس",d:false,nt:""}],lastUpdate:new Date().toLocaleDateString()};
 let activeTab='sins', editIdx=null, prayerTimes=null;
 let notifiedCache = LS.j('mizan_notified_today') || {};
 
 class AstroPrayer{
-  constructor(lat,lng,tz=3){ this.lat=lat; this.lng=lng; this.tz=tz; this.D2R=Math.PI/180; this.R2D=180/Math.PI; this.angles={Fajr:16,Maghrib:4,Isha:14,Sunrise:0.833} }
+  constructor(lat,lng,tz=3){ this.lat=lat; this.lng=lng; this.tz=tz; this.D2R=Math.PI/180; this.R2D=180/Math.PI; this.angles={Fajr:16,Maghrib:4,Sunrise:0.833} }
   fixA(a){a%=360;return a<0?a+360:a}
   fixH(h){h%=24;return h<0?h+24:h}
   julian(date){ let y=date.getFullYear(), m=date.getMonth()+1, d=date.getDate()+date.getHours()/24+date.getMinutes()/1440+date.getSeconds()/86400; if(m<=2){y--;m+=12} let A=Math.floor(y/100), B=2-A+Math.floor(A/4); return Math.floor(365.25*(y+4716))+Math.floor(30.6001*(m+1))+d+B-1524.5; }
@@ -47,9 +47,7 @@ class AstroPrayer{
     return {
       Fajr: this.toHM(sunriseRaw!=null? sunriseRaw - 1 : null), // توقيتك الأصلي: قبل الشروق بساعة
       Dhuhr: this.toHM(dhuhrRaw!=null? dhuhrRaw + 10/60 : null), // +10 دقائق
-      Asr: this.toHM(dhuhrRaw!=null? dhuhrRaw + 1 : null), // +ساعة
       Maghrib: this.toHM(maghribBaseRaw!=null? maghribBaseRaw + 5/60 : null), // +5 دقائق
-      Isha: this.toHM(maghribBaseRaw!=null? maghribBaseRaw + 30/60 : null), // +30 دقيقة
       Layl: this.toHM(sunriseRaw!=null? sunriseRaw - 220/60 : null), // <-- المطلوب: قبل الشروق بـ 220 دقيقة (3س و40د)
       Sunrise: this.toHM(sunriseRaw)
     };
@@ -113,6 +111,7 @@ function checkNotify(curMins){
   if(LS.g('mizan_notify_date')!==today){notifiedCache={};LS.s('mizan_notify_date',today);LS.s('mizan_notified_today',{});}
   for(let [en,t] of Object.entries(prayerTimes)){
     if(!t||en==='Sunrise'||en.startsWith('_'))continue; // الآن نسمح لـ Layl
+    if(en==='Asr'||en==='Isha') continue; // حماية: تجاهل أي بيانات قديمة للعصر/العشاء
     let [h,m]=t.split(':').map(Number); if(isNaN(h))continue;
     let target=h*60+m;
     // نافذة دقيقة واحدة بدل مطابقة ثانية واحدة
@@ -124,8 +123,11 @@ function checkNotify(curMins){
 }
 function to12(t){if(!t||!t.includes(':'))return '--:--';let [h,m]=t.split(':').map(Number);let suf=h>=12?'م':'ص';h=h%12||12;return `${h}:${String(m).padStart(2,'0')} ${suf}`}
 function applyTimes(times){
-  if(!times) return; prayerTimes=times;
-  const map={fajr:'Fajr',dhuhr:'Dhuhr',asr:'Asr',maghrib:'Maghrib',isha:'Isha',layl:'Layl'};
+  if(!times) return;
+  // تنظيف أي بيانات قديمة مخزنة للعصر/العشاء قبل التطبيق
+  delete times.Asr; delete times.Isha;
+  prayerTimes=times;
+  const map={fajr:'Fajr',dhuhr:'Dhuhr',maghrib:'Maghrib',layl:'Layl'};
   Object.entries(map).forEach(([k,en])=>{ let el=$(`t-${k}`); if(el&&times[en]) el.innerText=to12(times[en]) });
   if(window.prayerInt) clearInterval(window.prayerInt);
   window.prayerInt=setInterval(tick,1000); tick();
@@ -145,9 +147,7 @@ function fetchTimes(lat,lng,isPrecise=false){
       let final={
         Fajr:astro.addMinsHM(raw.Sunrise,-60),
         Dhuhr:astro.addMinsHM(raw.Dhuhr,10),
-        Asr:astro.addMinsHM(raw.Dhuhr,60),
         Maghrib:astro.addMinsHM(raw.Maghrib,5),
-        Isha:astro.addMinsHM(raw.Maghrib,30),
         Layl:astro.addMinsHM(raw.Sunrise,-220), // قبل الشروق بـ 220 دقيقة
         Sunrise:raw.Sunrise
       };
@@ -178,7 +178,7 @@ function tick(){
   if(!prayerTimes)return; let now=new Date(),cur=now.getHours()*60+now.getMinutes();
   let toM=t=>{if(!t||!t.includes(':'))return NaN;let [h,m]=t.split(':').map(Number);return h*60+m};
   // أضفنا صلاة الليل للعد التنازلي
-  let order=[['Layl','الليل'],['Fajr','الصبح'],['Dhuhr','الظهر'],['Asr','العصر'],['Maghrib','المغرب'],['Isha','العشاء']].map(([en,ar])=>({en,ar,m:toM(prayerTimes[en])})).filter(x=>!isNaN(x.m)).sort((a,b)=>a.m-b.m);
+  let order=[['Layl','الليل'],['Fajr','الصبح'],['Dhuhr','الظهر'],['Maghrib','المغرب']].map(([en,ar])=>({en,ar,m:toM(prayerTimes[en])})).filter(x=>!isNaN(x.m)).sort((a,b)=>a.m-b.m);
   if(!order.length)return; let next=order.find(o=>cur<o.m)||{...order[0],m:order[0].m+1440}; let diff=next.m-cur;if(diff<0)diff+=1440; $('nextPrayerCounter').textContent=`باقي على ${next.ar}: ${Math.floor(diff/60)}س ${diff%60}د`; checkNotify(cur);
 }
 function togglePrayerMenu(){let m=$('prayerMenu');if(!m)return;m.style.display=m.style.display==='block'?'none':'block'}
