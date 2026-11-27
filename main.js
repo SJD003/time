@@ -147,7 +147,7 @@ function fetchTimes(lat,lng,isPrecise=false){
       let final={
         Fajr:astro.addMinsHM(raw.Sunrise,-60),
         Dhuhr:astro.addMinsHM(raw.Dhuhr,10),
-        Maghrib:astro.addMinsHM(raw.Maghrib,5),
+        Maghrib:astro.addMinsHM(raw.Maghrib,10),
         Layl:astro.addMinsHM(raw.Sunrise,-220), // قبل الشروق بـ 220 دقيقة
         Sunrise:raw.Sunrise
       };
