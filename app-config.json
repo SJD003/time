@@ -1,6 +1,6 @@
 {
   "version": "3.22",
-  "maintenance": false,
+  "maintenance": true,
   "maintenanceMessage": "🛠️ جاري تطوير ميزات جديدة لصلاة الليل.. يرجى الإنتظار قليلاً",
   "forceUpdate": false,
   "whatsNew": "🚀 V3.22: صلاة الليل الآن قبل الشروق بـ 220 دقيقة + إشعارات خلفية تعمل حتى لو التطبيق مقفل + إصلاح حساب الزوال",
