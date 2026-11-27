@@ -1,5 +1,5 @@
 // control.js - ميزان V21 / V3.22 - نظام التحكم بالتحديثات والإشعارات الخلفية
-const LOCAL_VERSION = "3.22";
+const LOCAL_VERSION = "3.23";
 const MIN_VERSION = "3.0";
 const CHECK_INTERVAL = 60000; // كل دقيقة
 
