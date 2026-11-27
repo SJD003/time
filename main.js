@@ -47,7 +47,7 @@ class AstroPrayer{
     return {
       Fajr: this.toHM(sunriseRaw!=null? sunriseRaw - 1 : null), // توقيتك الأصلي: قبل الشروق بساعة
       Dhuhr: this.toHM(dhuhrRaw!=null? dhuhrRaw + 10/60 : null), // +10 دقائق
-      Maghrib: this.toHM(maghribBaseRaw!=null? maghribBaseRaw + 5/60 : null), // +5 دقائق
+      Maghrib: this.toHM(maghribBaseRaw!=null? maghribBaseRaw + 10/60 : null), // +10 دقائق
       Layl: this.toHM(sunriseRaw!=null? sunriseRaw - 220/60 : null), // <-- المطلوب: قبل الشروق بـ 220 دقيقة (3س و40د)
       Sunrise: this.toHM(sunriseRaw)
     };
